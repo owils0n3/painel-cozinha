@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>Painel da Cozinha — Controle</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0" rel="stylesheet"/>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#f8f9fb",
+            "surface-container-low": "#f3f4f6",
+            "surface-container": "#edeef0",
+            "surface-container-high": "#e7e8ea",
+            "surface-container-highest": "#e1e2e4",
+            "surface-container-lowest": "#ffffff",
+            "primary": "#000000",
+            "on-primary": "#ffffff",
+            "primary-container": "#1b1b1e",
+            "on-primary-container": "#9a989d",
+            "secondary": "#5d5e66",
+            "on-surface": "#191c1e",
+            "on-surface-variant": "#47464b",
+            "outline": "#77767b",
+            "error": "#ba1a1a"
+          },
+          fontFamily: {
+            "sans": ["Hanken Grotesk", "sans-serif"],
+            "display": ["Space Grotesk", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fb;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    ::-webkit-scrollbar { display: none; }
+    .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
+    .pt-safe { padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
+  </style>
+
+  <!-- Firebase Compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="./config.js"></script>
+</head>
+
+<body class="bg-surface font-sans text-on-surface antialiased min-h-screen flex flex-col">
+
+  <!-- ===================================================================== -->
+  <!-- TELA DE LOGIN                                                         -->
+  <!-- ===================================================================== -->
+  <section id="login-view" class="hidden flex-1 flex flex-col justify-center px-6 py-10 max-w-md w-full mx-auto">
+    <div class="bg-primary-container text-on-primary rounded-3xl p-7 shadow-xl mb-6">
+      <span class="text-xs uppercase tracking-[0.2em] text-on-primary-container font-semibold">PAINEL DA COZINHA</span>
+      <h1 class="font-display text-3xl font-bold tracking-tight mt-1">Acesso Restrito</h1>
+      <p class="text-sm text-on-primary-container mt-2">Entre para controlar a TV, os planners e os alertas da casa.</p>
+    </div>
+
+    <form id="login-form" class="bg-surface-container-lowest rounded-3xl p-6 shadow-sm flex flex-col gap-4">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">E-mail</label>
+        <input id="login-email" type="email" required autocomplete="email" placeholder="seu@email.com"
+          class="w-full px-4 py-3 rounded-xl bg-surface-container-low text-on-surface text-base outline-none focus:ring-2 focus:ring-primary"/>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Senha</label>
+        <input id="login-password" type="password" required autocomplete="current-password" placeholder="••••••••"
+          class="w-full px-4 py-3 rounded-xl bg-surface-container-low text-on-surface text-base outline-none focus:ring-2 focus:ring-primary"/>
+      </div>
+      <p id="login-error" class="hidden text-sm text-error font-medium"></p>
+      <button id="login-btn" type="submit"
+        class="mt-2 w-full py-3.5 rounded-xl bg-primary text-on-primary font-semibold text-base active:scale-[0.99] transition-transform cursor-pointer">
+        Entrar
+      </button>
+    </form>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- PAINEL PRINCIPAL (AUTENTICADO)                                        -->
+  <!-- ===================================================================== -->
+  <div id="app-view" class="hidden flex-1 flex flex-col max-w-lg w-full mx-auto px-5 pt-safe pb-24">
+
+    <!-- Cabeçalho -->
+    <header class="flex flex-col pt-2 pb-4">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs uppercase tracking-[0.16em] text-secondary font-semibold">Painel da Cozinha</span>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+            TV 32"
+          </span>
+          <button id="logout-btn" class="px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high cursor-pointer">
+            Sair
+          </button>
+        </div>
+      </div>
+
+      <h1 id="page-title" class="font-display text-3xl text-on-surface font-bold tracking-tight">Programação</h1>
+
+      <!-- Abas -->
+      <nav class="flex items-center gap-7 mt-5 border-b border-surface-container-high">
+        <button data-tab="playlist" class="tab-btn relative pb-2.5 text-base font-semibold text-on-surface cursor-pointer">
+          Playlist
+          <span class="tab-indicator absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+        </button>
+        <button data-tab="planners" class="tab-btn relative pb-2.5 text-base font-semibold text-secondary cursor-pointer">
+          Planners
+          <span class="tab-indicator hidden absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+        </button>
+        <button data-tab="alertas" class="tab-btn relative pb-2.5 text-base font-semibold text-secondary cursor-pointer">
+          Alertas
+          <span class="tab-indicator hidden absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- =================================================================== -->
+    <!-- ABA 1: PLAYLIST                                                     -->
+    <!-- =================================================================== -->
+    <section id="tab-playlist" class="flex flex-col gap-5">
+      <!-- Cartão Preto Fosco: Controle Rápido -->
+      <div class="bg-primary-container text-on-primary rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-on-primary/10">
+            <span class="w-2 h-2 rounded-full bg-surface-container-lowest animate-pulse"></span>
+            <span id="hero-status-tag" class="text-[11px] uppercase tracking-widest text-on-primary/80 font-semibold">Controle da TV</span>
+          </div>
+          <button id="btn-skip" class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-on-primary/15 hover:bg-on-primary/25 active:scale-95 transition-all text-xs font-semibold cursor-pointer">
+            <span>Pular</span>
+            <span class="material-symbols-outlined text-base leading-none">fast_forward</span>
+          </button>
+        </div>
+
+        <h2 id="hero-mode-title" class="font-display text-xl font-bold tracking-tight">Rotação Automática</h2>
+        <p id="hero-mode-sub" class="text-sm text-on-primary-container mt-0.5">Alternando slides ativos automaticamente</p>
+
+        <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-on-primary/10">
+          <button id="btn-pause" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-on-primary/10 hover:bg-on-primary/20 text-xs font-semibold cursor-pointer">
+            <span id="pause-icon" class="material-symbols-outlined text-base leading-none">pause</span>
+            <span id="pause-label">Pausar</span>
+          </button>
+          <button id="btn-unpin" class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-on-primary text-primary text-xs font-semibold cursor-pointer">
+            <span class="material-symbols-outlined text-base leading-none">keep_off</span>
+            <span>Desafixar</span>
+          </button>
+          <button id="btn-sync-photos" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-on-primary/10 hover:bg-on-primary/20 text-xs font-semibold cursor-pointer ml-auto">
+            <span class="material-symbols-outlined text-base leading-none">sync</span>
+            <span>Sincronizar Fotos</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between px-1">
+        <span class="text-sm font-bold text-on-surface">Fila de Apresentação</span>
+        <span id="playlist-count" class="text-xs text-secondary">5 itens</span>
+      </div>
+
+      <div id="playlist-list" class="flex flex-col gap-3"></div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- ABA 2: PLANNERS & RECADO                                            -->
+    <!-- =================================================================== -->
+    <section id="tab-planners" class="hidden flex flex-col gap-4">
+      <!-- Seletor de Destino -->
+      <div class="grid grid-cols-4 gap-1.5 bg-surface-container p-1 rounded-2xl">
+        <button data-target="wilson" class="planner-subbtn py-2 rounded-xl text-xs font-semibold bg-primary text-on-primary cursor-pointer transition-colors">Wilson</button>
+        <button data-target="rayssa" class="planner-subbtn py-2 rounded-xl text-xs font-semibold text-secondary cursor-pointer transition-colors">Rayssa</button>
+        <button data-target="meninos" class="planner-subbtn py-2 rounded-xl text-xs font-semibold text-secondary cursor-pointer transition-colors">Meninos</button>
+        <button data-target="recado" class="planner-subbtn py-2 rounded-xl text-xs font-semibold text-secondary cursor-pointer transition-colors">Recado</button>
+      </div>
+
+      <!-- Barra de ações da lista -->
+      <div id="planner-list-header" class="flex items-center justify-between px-1">
+        <span id="planner-hint" class="text-xs text-secondary">Toque no status para alternar</span>
+        <button id="btn-reset-kids" class="hidden text-xs font-semibold px-3 py-1 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface cursor-pointer">
+          Zerar dia
+        </button>
+      </div>
+
+      <!-- Lista de tarefas -->
+      <div id="planner-items" class="flex flex-col gap-2.5"></div>
+
+      <!-- Editor do Recado da Casa -->
+      <div id="memo-editor" class="hidden bg-surface-container-lowest rounded-2xl p-5 shadow-sm flex flex-col gap-3">
+        <label class="text-xs uppercase tracking-wider font-semibold text-secondary">Recado exibido na TV</label>
+        <textarea id="memo-input" rows="4" placeholder="Escreva um recado curto e direto..."
+          class="w-full p-3.5 rounded-xl bg-surface-container-low text-on-surface text-base outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+        <button id="btn-save-memo" class="w-full py-3 rounded-xl bg-primary text-on-primary font-semibold text-sm active:scale-[0.99] transition-transform cursor-pointer">
+          Salvar Recado
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- ABA 3: ALERTAS SONOROS                                              -->
+    <!-- =================================================================== -->
+    <section id="tab-alertas" class="hidden flex flex-col gap-5">
+      <!-- Banner se houver alerta ativo -->
+      <div id="active-alert-banner" class="hidden bg-primary-container text-on-primary rounded-2xl p-4 shadow-lg flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <span class="text-[11px] uppercase tracking-widest text-on-primary-container font-semibold">Alerta no ar</span>
+          <p id="active-alert-name" class="font-display text-base font-bold truncate">Hora do banho</p>
+        </div>
+        <button id="btn-cancel-alert" class="shrink-0 px-3.5 py-2 rounded-xl bg-on-primary text-primary text-xs font-bold cursor-pointer">
+          Encerrar
+        </button>
+      </div>
+
+      <!-- Atalhos Rápidos -->
+      <div>
+        <span class="block text-sm font-bold text-on-surface mb-2.5 px-1">Disparo Rápido (com som na TV)</span>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button data-preset="banho" class="preset-alert bg-surface-container-lowest p-4 rounded-2xl shadow-sm text-left active:scale-[0.98] transition-transform cursor-pointer">
+            <span class="block font-display text-base font-bold text-on-surface">Hora do banho</span>
+            <span class="block text-xs text-secondary mt-0.5">60s • Guardar brinquedos</span>
+          </button>
+          <button data-preset="brinquedos" class="preset-alert bg-surface-container-lowest p-4 rounded-2xl shadow-sm text-left active:scale-[0.98] transition-transform cursor-pointer">
+            <span class="block font-display text-base font-bold text-on-surface">Guardar brinquedos</span>
+            <span class="block text-xs text-secondary mt-0.5">60s • Organizar a casa</span>
+          </button>
+          <button data-preset="dormir" class="preset-alert bg-surface-container-lowest p-4 rounded-2xl shadow-sm text-left active:scale-[0.98] transition-transform cursor-pointer">
+            <span class="block font-display text-base font-bold text-on-surface">Hora de dormir</span>
+            <span class="block text-xs text-secondary mt-0.5">60s • Escovar os dentes</span>
+          </button>
+          <button data-preset="mesa" class="preset-alert bg-surface-container-lowest p-4 rounded-2xl shadow-sm text-left active:scale-[0.98] transition-transform cursor-pointer">
+            <span class="block font-display text-base font-bold text-on-surface">Mesa pronta</span>
+            <span class="block text-xs text-secondary mt-0.5">45s • Venham comer</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Alerta Personalizado -->
+      <form id="custom-alert-form" class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm flex flex-col gap-3.5">
+        <span class="text-sm font-bold text-on-surface">Alerta Personalizado</span>
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Título</label>
+          <input id="alert-title-in" type="text" required placeholder="Ex: Hora de sair"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Mensagem</label>
+          <input id="alert-msg-in" type="text" placeholder="Ex: Calçar o tênis e pegar a mochila."
+            class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Duração (segundos)</label>
+          <input id="alert-dur-in" type="number" min="10" max="600" value="45"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+        </div>
+        <button type="submit" class="mt-1 w-full py-3 rounded-xl bg-primary text-on-primary font-semibold text-sm active:scale-[0.99] transition-transform cursor-pointer">
+          Disparar Alerta na TV
+        </button>
+      </form>
+    </section>
+  </div>
+
+  <!-- FAB (+) — Visível na aba Planners (exceto Recado) -->
+  <button id="fab-add" aria-label="Adicionar item"
+    class="hidden fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer">
+    <span class="material-symbols-outlined text-3xl">add</span>
+  </button>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: CRIAR / EDITAR TAREFA                                          -->
+  <!-- ===================================================================== -->
+  <div id="task-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <form id="task-form" class="bg-surface-container-lowest w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-safe flex flex-col gap-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="modal-title" class="font-display text-xl font-bold text-on-surface">Nova atividade</h3>
+        <button type="button" id="modal-close" class="p-1.5 rounded-full bg-surface-container text-on-surface-variant cursor-pointer">
+          <span class="material-symbols-outlined text-xl leading-none">close</span>
+        </button>
+      </div>
+
+      <input type="hidden" id="task-id"/>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Título</label>
+        <input id="task-title" type="text" required placeholder="Ex: Consultório Manhã"
+          class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+      </div>
+
+      <!-- Campos Adulto -->
+      <div id="adult-fields" class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Categoria</label>
+          <input id="task-category" type="text" placeholder="Trabalho / Casa"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Horário</label>
+          <input id="task-time" type="time" value="08:00"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+        </div>
+      </div>
+
+      <!-- Campos Meninos -->
+      <div id="kids-fields" class="hidden flex flex-col gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Subtítulo</label>
+          <input id="task-subtitle" type="text" placeholder="Ex: Água morna e pijama"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary"/>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Ícone</label>
+          <select id="task-icon" class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary">
+            <option value="tooth">Dente (Escovar os dentes)</option>
+            <option value="toys">Blocos (Guardar brinquedos)</option>
+            <option value="bath">Banheira (Hora do banho)</option>
+            <option value="sleep">Lua (Hora de dormir)</option>
+            <option value="book">Livro (Leitura / Tarefa)</option>
+            <option value="food">Talheres (Refeição)</option>
+            <option value="star">Estrela (Geral)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wider font-semibold text-secondary mb-1">Status</label>
+        <select id="task-status" class="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low text-sm outline-none focus:ring-2 focus:ring-primary">
+          <option value="pendente">Pendente</option>
+          <option value="agora">Agora</option>
+          <option value="feito">Feito</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2.5 pt-2">
+        <button type="button" id="btn-delete-task" class="hidden px-4 py-3 rounded-xl bg-surface-container text-error font-semibold text-sm cursor-pointer">
+          Excluir
+        </button>
+        <button type="submit" class="flex-1 py-3 rounded-xl bg-primary text-on-primary font-semibold text-sm cursor-pointer">
+          Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toast de Feedback -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary-container text-on-primary px-4 py-2.5 rounded-full text-xs font-semibold shadow-xl"></div>
+
+  <script>
+    // =========================================================================
+    // 1. ESTADO PADRÃO E PRESETS
+    // =========================================================================
+    const DEFAULT_STATE = {
+      playlist: {
+        items: [
+          { id: "wilson",  type: "planner", target: "wilson",  label: "Planner — Wilson",   duration: 30, enabled: true, order: 0 },
+          { id: "rayssa",  type: "planner", target: "rayssa",  label: "Planner — Rayssa",   duration: 30, enabled: true, order: 1 },
+          { id: "meninos", type: "kids",                       label: "Rotina dos Meninos", duration: 30, enabled: true, order: 2 },
+          { id: "widgets", type: "widgets",                    label: "Relógio e Recado",   duration: 20, enabled: true, order: 3 },
+          { id: "fotos",   type: "photos",                     label: "Fotos da Família",   duration: 20, enabled: true, order: 4 }
+        ],
+        control: { pinnedId: null, paused: false, skipToken: 0, photosRefreshToken: 0 }
+      },
+      planners: {
+        wilson: [
+          { id: "w1", title: "Consultório Manhã", category: "Trabalho", time: "08:00", status: "feito" },
+          { id: "w2", title: "Almoço em Família", category: "Casa",     time: "12:30", status: "feito" },
+          { id: "w3", title: "Atendimento Tarde", category: "Trabalho", time: "14:30", status: "agora" },
+          { id: "w4", title: "Corrida / Pedal",   category: "Treino",   time: "18:30", status: "pendente" }
+        ],
+        rayssa: [
+          { id: "r1", title: "Atendimentos Manhã", category: "Estúdio", time: "09:00", status: "feito" },
+          { id: "r2", title: "Almoço em Família",  category: "Casa",    time: "12:30", status: "feito" },
+          { id: "r3", title: "Agenda da Tarde",    category: "Estúdio", time: "15:00", status: "agora" },
+          { id: "r4", title: "Organizar Mochilas", category: "Casa",    time: "19:30", status: "pendente" }
+        ],
+        meninos: [
+          { id: "m1", title: "Escovar os dentes",  subtitle: "Manhã & Noite",           icon: "tooth", status: "feito" },
+          { id: "m2", title: "Guardar brinquedos", subtitle: "Quarto e sala arrumados", icon: "toys",  status: "feito" },
+          { id: "m3", title: "Hora do banho",      subtitle: "Água morna e pijama",     icon: "bath",  status: "agora" },
+          { id: "m4", title: "Hora de dormir",     subtitle: "História e bons sonhos",  icon: "sleep", status: "falta" }
+        ]
+      },
+      memo: { text: "Separar a mochila da escola e a garrafinha para amanhã cedo." },
+      alert: null
+    };
+
+    const ALERT_PRESETS = {
+      banho:      { title: "Hora do banho",      message: "Guardar os brinquedos e ir para o chuveiro.", duration: 60 },
+      brinquedos: { title: "Guardar brinquedos", message: "Hora de organizar a sala e o quarto.",         duration: 60 },
+      dormir:     { title: "Hora de dormir",     message: "Escovar os dentes e ir para a cama.",          duration: 60 },
+      mesa:       { title: "Mesa pronta",        message: "A refeição está servida na cozinha.",          duration: 45 }
+    };
+
+    let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    let activeTab = "playlist";
+    let activePlanner = "wilson";
+    let db = null;
+    let toastTimer = null;
+
+    function esc(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.remove("hidden");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.add("hidden"), 2200);
+    }
+
+    // =========================================================================
+    // 2. INICIALIZAÇÃO DO FIREBASE + AUTH
+    // =========================================================================
+    firebase.initializeApp(window.APP_CONFIG.firebase);
+    const auth = firebase.auth();
+    db = firebase.database();
+
+    const loginView = document.getElementById("login-view");
+    const appView = document.getElementById("app-view");
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginView.classList.add("hidden");
+        appView.classList.remove("hidden");
+        bindDatabase();
+      } else {
+        appView.classList.add("hidden");
+        document.getElementById("fab-add").classList.add("hidden");
+        loginView.classList.remove("hidden");
+      }
+    });
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value.trim();
+      const pass = document.getElementById("login-password").value;
+      const errEl = document.getElementById("login-error");
+      const btn = document.getElementById("login-btn");
+
+      errEl.classList.add("hidden");
+      btn.disabled = true;
+      btn.textContent = "Entrando...";
+
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+      } catch (err) {
+        errEl.textContent = "E-mail ou senha inválidos.";
+        errEl.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => auth.signOut());
+
+    // =========================================================================
+    // 3. SINCRONIZAÇÃO COM REALTIME DATABASE
+    // =========================================================================
+    let dbBound = false;
+    function bindDatabase() {
+      if (dbBound) return;
+      dbBound = true;
+
+      db.ref("playlist").on("value", snap => {
+        const val = snap.val();
+        if (val) {
+          if (val.items) state.playlist.items = Array.isArray(val.items) ? val.items : Object.values(val.items);
+          if (val.control) state.playlist.control = { ...state.playlist.control, ...val.control };
+        }
+        renderPlaylist();
+      });
+
+      db.ref("planners").on("value", snap => {
+        const val = snap.val();
+        if (val) {
+          ["wilson", "rayssa", "meninos"].forEach(k => {
+            if (val[k] !== undefined) {
+              state.planners[k] = Array.isArray(val[k]) ? val[k] : Object.values(val[k] || {});
+            }
+          });
+        }
+        renderPlanners();
+      });
+
+      db.ref("memo").on("value", snap => {
+        const val = snap.val();
+        if (val && typeof val.text === "string") {
+          state.memo = val;
+          const input = document.getElementById("memo-input");
+          if (document.activeElement !== input) input.value = val.text;
+        }
+      });
+
+      db.ref("alert").on("value", snap => {
+        state.alert = snap.val();
+        renderActiveAlertBanner();
+      });
+    }
+
+    // =========================================================================
+    // 4. NAVEGAÇÃO DE ABAS
+    // =========================================================================
+    const TAB_TITLES = { playlist: "Programação", planners: "Planners", alertas: "Alertas" };
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById("page-title").textContent = TAB_TITLES[tab];
+
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        const isCurrent = btn.dataset.tab === tab;
+        btn.classList.toggle("text-on-surface", isCurrent);
+        btn.classList.toggle("text-secondary", !isCurrent);
+        btn.querySelector(".tab-indicator").classList.toggle("hidden", !isCurrent);
+      });
+
+      ["playlist", "planners", "alertas"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
+      });
+
+      updateFabVisibility();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+
+    function updateFabVisibility() {
+      const fab = document.getElementById("fab-add");
+      const show = activeTab === "planners" && activePlanner !== "recado";
+      fab.classList.toggle("hidden", !show);
+    }
+
+    // =========================================================================
+    // 5. ABA PLAYLIST
+    // =========================================================================
+    function renderPlaylist() {
+      const items = [...state.playlist.items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const ctrl = state.playlist.control || {};
+      const activeCount = items.filter(i => i.enabled).length;
+
+      // Hero Card
+      const heroTitle = document.getElementById("hero-mode-title");
+      const heroSub = document.getElementById("hero-mode-sub");
+      const btnUnpin = document.getElementById("btn-unpin");
+
+      if (ctrl.pinnedId) {
+        const pinned = items.find(i => i.id === ctrl.pinnedId);
+        heroTitle.textContent = pinned ? pinned.label : "Slide Fixado";
+        heroSub.textContent = "Tela travada neste slide";
+        btnUnpin.classList.remove("hidden");
+      } else if (ctrl.paused) {
+        heroTitle.textContent = "Playlist Pausada";
+        heroSub.textContent = "A TV permanece no slide atual";
+        btnUnpin.classList.add("hidden");
+      } else {
+        heroTitle.textContent = "Rotação Automática";
+        heroSub.textContent = `${activeCount} slide(s) ativo(s) na programação`;
+        btnUnpin.classList.add("hidden");
+      }
+
+      document.getElementById("pause-icon").textContent = ctrl.paused ? "play_arrow" : "pause";
+      document.getElementById("pause-label").textContent = ctrl.paused ? "Retomar" : "Pausar";
+      document.getElementById("playlist-count").textContent = `${activeCount} de ${items.length} ativos`;
+
+      // Lista de cards
+      const container = document.getElementById("playlist-list");
+      container.innerHTML = items.map(item => {
+        const isPinned = ctrl.pinnedId === item.id;
+        return `
+          <article class="bg-surface-container-lowest p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3 ${item.enabled ? '' : 'opacity-65'}">
+            <div class="min-w-0 flex-1">
+              <h3 class="font-display text-base font-bold text-on-surface truncate">${esc(item.label)}</h3>
+              <div class="flex items-center gap-2 mt-1.5">
+                <button onclick="changeDuration('${item.id}', -5)" class="w-6 h-6 rounded-full bg-surface-container text-on-surface text-xs font-bold cursor-pointer">-</button>
+                <span class="text-xs font-semibold text-secondary min-w-[30px] text-center">${item.duration}s</span>
+                <button onclick="changeDuration('${item.id}', 5)" class="w-6 h-6 rounded-full bg-surface-container text-on-surface text-xs font-bold cursor-pointer">+</button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 shrink-0">
+              <button onclick="togglePin('${item.id}')"
+                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-colors ${isPinned ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}">
+                <span class="material-symbols-outlined text-sm leading-none" style="font-variation-settings:'FILL' ${isPinned ? 1 : 0};">push_pin</span>
+                <span>${isPinned ? 'Fixado' : 'Fixar'}</span>
+              </button>
+
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="toggleSlide('${item.id}', this.checked)" class="sr-only peer"/>
+                <div class="w-11 h-6 bg-surface-container-high peer-checked:bg-primary rounded-full transition-colors relative">
+                  <div class="w-4 h-4 bg-surface-container-lowest rounded-full absolute top-1 left-1 peer-checked:translate-x-5 transition-transform shadow-sm"></div>
+                </div>
+              </label>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    window.toggleSlide = (id, enabled) => {
+      const items = state.playlist.items.map(i => i.id === id ? { ...i, enabled } : i);
+      db.ref("playlist/items").set(items);
+    };
+
+    window.changeDuration = (id, delta) => {
+      const items = state.playlist.items.map(i => {
+        if (i.id !== id) return i;
+        return { ...i, duration: Math.max(5, Math.min(300, (Number(i.duration) || 20) + delta)) };
+      });
+      db.ref("playlist/items").set(items);
+    };
+
+    window.togglePin = (id) => {
+      const nextPin = state.playlist.control?.pinnedId === id ? null : id;
+      db.ref("playlist/control/pinnedId").set(nextPin);
+      showToast(nextPin ? "Slide fixado na TV" : "Slide desafixado");
+    };
+
+    document.getElementById("btn-skip").addEventListener("click", () => {
+      db.ref("playlist/control").update({ pinnedId: null, skipToken: Date.now() });
+      showToast("Pulando para o próximo slide");
+    });
+
+    document.getElementById("btn-pause").addEventListener("click", () => {
+      const next = !state.playlist.control?.paused;
+      db.ref("playlist/control/paused").set(next);
+      showToast(next ? "Playlist pausada" : "Playlist retomada");
+    });
+
+    document.getElementById("btn-unpin").addEventListener("click", () => {
+      db.ref("playlist/control/pinnedId").set(null);
+      showToast("Voltando para rotação automática");
+    });
+
+    document.getElementById("btn-sync-photos").addEventListener("click", () => {
+      db.ref("playlist/control/photosRefreshToken").set(Date.now());
+      showToast("Atualizando pasta do Google Drive na TV");
+    });
+
+    // =========================================================================
+    // 6. ABA PLANNERS & RECADO
+    // =========================================================================
+    document.querySelectorAll(".planner-subbtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activePlanner = btn.dataset.target;
+        document.querySelectorAll(".planner-subbtn").forEach(b => {
+          const on = b.dataset.target === activePlanner;
+          b.classList.toggle("bg-primary", on);
+          b.classList.toggle("text-on-primary", on);
+          b.classList.toggle("text-secondary", !on);
+        });
+        renderPlanners();
+        updateFabVisibility();
+      });
+    });
+
+    function renderPlanners() {
+      const isMemo = activePlanner === "recado";
+      const isKids = activePlanner === "meninos";
+
+      document.getElementById("planner-list-header").classList.toggle("hidden", isMemo);
+      document.getElementById("planner-items").classList.toggle("hidden", isMemo);
+      document.getElementById("memo-editor").classList.toggle("hidden", !isMemo);
+      document.getElementById("btn-reset-kids").classList.toggle("hidden", !isKids);
+
+      if (isMemo) {
+        const input = document.getElementById("memo-input");
+        if (document.activeElement !== input) input.value = state.memo?.text || "";
+        return;
+      }
+
+      const list = state.planners[activePlanner] || [];
+      const container = document.getElementById("planner-items");
+
+      if (!list.length) {
+        container.innerHTML = `
+          <div class="bg-surface-container-lowest rounded-2xl p-8 text-center shadow-sm">
+            <p class="text-sm text-secondary">Nenhum item ainda. Toque no <strong>+</strong> para adicionar.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map((item, idx) => {
+        const isNow = item.status === "agora";
+        const isDone = item.status === "feito";
+        const label = isNow ? "Agora" : (isDone ? "Feito" : (isKids ? "Falta" : "Pendente"));
+        const badgeCls = isNow
+          ? "bg-primary text-on-primary"
+          : (isDone ? "bg-surface-container-high text-on-surface" : "bg-surface-container-low text-secondary");
+
+        const meta = isKids
+          ? esc(item.subtitle || "")
+          : `${esc(item.time || "--:--")} • ${esc(item.category || "Rotina")}`;
+
+        return `
+          <article class="bg-surface-container-lowest p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3">
+            <div onclick="openTaskModal(${idx})" class="min-w-0 flex-1 cursor-pointer">
+              <h3 class="font-display text-base font-bold text-on-surface truncate ${isDone ? 'line-through opacity-60' : ''}">${esc(item.title)}</h3>
+              <p class="text-xs text-secondary truncate mt-0.5">${meta}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="cycleStatus(${idx})" class="${badgeCls} px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide cursor-pointer">
+                ${label}
+              </button>
+              <button onclick="openTaskModal(${idx})" aria-label="Editar" class="p-1.5 rounded-full text-secondary hover:bg-surface-container cursor-pointer">
+                <span class="material-symbols-outlined text-lg leading-none">edit</span>
+              </button>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    window.cycleStatus = (idx) => {
+      const list = [...(state.planners[activePlanner] || [])];
+      const item = list[idx];
+      if (!item) return;
+
+      const isKids = activePlanner === "meninos";
+      const order = isKids ? ["falta", "agora", "feito"] : ["pendente", "agora", "feito"];
+      const nextStatus = order[(order.indexOf(item.status) + 1) % order.length];
+
+      // Se marcar como "agora", tira o "agora" dos outros itens para manter 1 destaque limpo na TV
+      const updated = list.map((it, i) => {
+        if (i === idx) return { ...it, status: nextStatus };
+        if (nextStatus === "agora" && it.status === "agora") {
+          return { ...it, status: isKids ? "falta" : "pendente" };
+        }
+        return it;
+      });
+
+      db.ref("planners/" + activePlanner).set(updated);
+    };
+
+    document.getElementById("btn-reset-kids").addEventListener("click", () => {
+      const updated = (state.planners.meninos || []).map(m => ({ ...m, status: "falta" }));
+      db.ref("planners/meninos").set(updated);
+      showToast("Rotina dos meninos zerada para o dia");
+    });
+
+    document.getElementById("btn-save-memo").addEventListener("click", () => {
+      const text = document.getElementById("memo-input").value.trim();
+      db.ref("memo").set({ text });
+      showToast("Recado atualizado na TV");
+    });
+
+    // Modal Criar / Editar
+    let editingIndex = null;
+    const modal = document.getElementById("task-modal");
+
+    window.openTaskModal = (idx = null) => {
+      editingIndex = idx;
+      const isKids = activePlanner === "meninos";
+      const list = state.planners[activePlanner] || [];
+      const item = idx !== null ? list[idx] : null;
+
+      document.getElementById("modal-title").textContent = item ? "Editar atividade" : "Nova atividade";
+      document.getElementById("adult-fields").classList.toggle("hidden", isKids);
+      document.getElementById("kids-fields").classList.toggle("hidden", !isKids);
+      document.getElementById("btn-delete-task").classList.toggle("hidden", item === null);
+
+      const statusSel = document.getElementById("task-status");
+      statusSel.options[0].value = isKids ? "falta" : "pendente";
+      statusSel.options[0].text = isKids ? "Falta" : "Pendente";
+
+      document.getElementById("task-title").value = item?.title || "";
+      document.getElementById("task-category").value = item?.category || "";
+      document.getElementById("task-time").value = item?.time || "08:00";
+      document.getElementById("task-subtitle").value = item?.subtitle || "";
+      document.getElementById("task-icon").value = item?.icon || "star";
+      statusSel.value = item?.status || (isKids ? "falta" : "pendente");
+
+      modal.classList.remove("hidden");
+    };
+
+    document.getElementById("fab-add").addEventListener("click", () => openTaskModal(null));
+    document.getElementById("modal-close").addEventListener("click", () => modal.classList.add("hidden"));
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
+
+    document.getElementById("task-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const isKids = activePlanner === "meninos";
+      const list = [...(state.planners[activePlanner] || [])];
+
+      const obj = isKids
+        ? {
+            id: editingIndex !== null ? list[editingIndex].id : "k" + Date.now(),
+            title: document.getElementById("task-title").value.trim(),
+            subtitle: document.getElementById("task-subtitle").value.trim(),
+            icon: document.getElementById("task-icon").value,
+            status: document.getElementById("task-status").value
+          }
+        : {
+            id: editingIndex !== null ? list[editingIndex].id : "t" + Date.now(),
+            title: document.getElementById("task-title").value.trim(),
+            category: document.getElementById("task-category").value.trim() || "Rotina",
+            time: document.getElementById("task-time").value || "08:00",
+            status: document.getElementById("task-status").value
+          };
+
+      if (editingIndex !== null) {
+        list[editingIndex] = obj;
+      } else {
+        list.push(obj);
+      }
+
+      db.ref("planners/" + activePlanner).set(list);
+      modal.classList.add("hidden");
+      showToast("Salvo na TV");
+    });
+
+    document.getElementById("btn-delete-task").addEventListener("click", () => {
+      if (editingIndex === null) return;
+      const list = [...(state.planners[activePlanner] || [])];
+      list.splice(editingIndex, 1);
+      db.ref("planners/" + activePlanner).set(list);
+      modal.classList.add("hidden");
+      showToast("Item removido");
+    });
+
+    // =========================================================================
+    // 7. ABA ALERTAS
+    // =========================================================================
+    function triggerAlert(title, message, duration) {
+      db.ref("alert").set({
+        id: "al_" + Date.now(),
+        title,
+        message,
+        duration: Math.max(10, Number(duration) || 45),
+        triggeredAt: Date.now()
+      });
+      showToast("Alerta enviado para a TV");
+    }
+
+    function renderActiveAlertBanner() {
+      const banner = document.getElementById("active-alert-banner");
+      const a = state.alert;
+      if (!a || !a.triggeredAt || (Date.now() - a.triggeredAt) / 1000 >= (a.duration || 30)) {
+        banner.classList.add("hidden");
+        return;
+      }
+      document.getElementById("active-alert-name").textContent = a.title || "Aviso ativo";
+      banner.classList.remove("hidden");
+    }
+
+    document.querySelectorAll(".preset-alert").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const p = ALERT_PRESETS[btn.dataset.preset];
+        if (p) triggerAlert(p.title, p.message, p.duration);
+      });
+    });
+
+    document.getElementById("custom-alert-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = document.getElementById("alert-title-in").value.trim();
+      const msg = document.getElementById("alert-msg-in").value.trim();
+      const dur = document.getElementById("alert-dur-in").value;
+      if (!title) return;
+      triggerAlert(title, msg, dur);
+      e.target.reset();
+      document.getElementById("alert-dur-in").value = 45;
+    });
+
+    document.getElementById("btn-cancel-alert").addEventListener("click", () => {
+      db.ref("alert").set(null);
+      showToast("Alerta encerrado");
+    });
+
+    setInterval(renderActiveAlertBanner, 3000);
+  </script>
+</body>
+</html>
