@@ -1,1 +1,748 @@
-teste
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Painel da Cozinha — Player</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..800&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet"/>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#f8f9fb",
+            "surface-container-low": "#f3f4f6",
+            "surface-container": "#edeef0",
+            "surface-container-high": "#e7e8ea",
+            "surface-container-highest": "#e1e2e4",
+            "surface-container-lowest": "#ffffff",
+            "surface-dim": "#d9dadc",
+            "primary": "#000000",
+            "on-primary": "#ffffff",
+            "primary-container": "#1b1b1e",
+            "on-primary-container": "#858387",
+            "secondary": "#5d5e66",
+            "on-secondary-fixed": "#1a1b22",
+            "on-surface": "#191c1e",
+            "on-surface-variant": "#47464b",
+            "outline": "#77767b",
+            "outline-variant": "#c8c5cb"
+          },
+          spacing: {
+            "space-xs": "0.75rem",
+            "space-sm": "1.25rem",
+            "space-md": "2rem",
+            "space-lg": "3rem",
+            "gutter": "2rem",
+            "margin": "3.25rem"
+          },
+          fontFamily: {
+            "body-lg": ["Hanken Grotesk", "sans-serif"],
+            "body-xl": ["Hanken Grotesk", "sans-serif"],
+            "label-md": ["Hanken Grotesk", "sans-serif"],
+            "label-lg": ["Hanken Grotesk", "sans-serif"],
+            "headline-md": ["Hanken Grotesk", "sans-serif"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "headline-xl": ["Space Grotesk", "sans-serif"],
+            "display-lg": ["Space Grotesk", "sans-serif"],
+            "display-xl": ["Space Grotesk", "sans-serif"]
+          },
+          fontSize: {
+            "label-md": ["1rem", { lineHeight: "1.375rem", letterSpacing: "0.06em", fontWeight: "500" }],
+            "label-lg": ["1.125rem", { lineHeight: "1.5rem", letterSpacing: "0.04em", fontWeight: "600" }],
+            "body-lg": ["1.25rem", { lineHeight: "1.875rem", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-xl": ["1.5rem", { lineHeight: "2.25rem", letterSpacing: "0em", fontWeight: "400" }],
+            "headline-md": ["1.75rem", { lineHeight: "2.25rem", letterSpacing: "0em", fontWeight: "600" }],
+            "headline-lg": ["2.25rem", { lineHeight: "2.75rem", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "headline-xl": ["3rem", { lineHeight: "3.5rem", letterSpacing: "-0.02em", fontWeight: "600" }],
+            "display-lg": ["3.75rem", { lineHeight: "4.25rem", letterSpacing: "-0.03em", fontWeight: "700" }],
+            "display-xl": ["5rem", { lineHeight: "5.5rem", letterSpacing: "-0.04em", fontWeight: "700" }]
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    ::-webkit-scrollbar { display: none; }
+    .slide-fade {
+      animation: fadeIn 0.35s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+
+  <!-- Firebase Compat (ideal para Android 10 WebView / Fully Kiosk) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="./config.js"></script>
+</head>
+
+<body class="bg-surface font-body-lg text-body-lg text-on-surface antialiased w-screen h-screen select-none">
+
+  <!-- Container Principal do Slide Ativo -->
+  <main id="stage" class="w-full h-full box-border"></main>
+
+  <!-- Overlay de Alerta Sonoro (Interrupção em Tela Cheia) -->
+  <div id="alert-overlay" class="hidden fixed inset-0 z-50 bg-surface p-margin flex flex-col justify-between">
+    <div aria-hidden="true" class="opacity-0 pointer-events-none">SPACER</div>
+
+    <div class="w-full max-w-5xl mx-auto bg-primary-container text-on-primary rounded-3xl p-space-lg shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[460px]">
+      <div class="flex items-center justify-between w-full">
+        <div class="inline-flex items-center px-4 py-1.5 rounded-full bg-surface-container-highest/10">
+          <span class="font-label-md text-label-md uppercase tracking-[0.25em] text-on-primary-container">AVISO AGORA</span>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-surface-container-lowest animate-pulse"></span>
+          <span class="font-label-md text-label-md uppercase tracking-widest text-on-primary-container">EM ANDAMENTO</span>
+        </div>
+      </div>
+
+      <div class="my-space-md flex flex-col space-y-4">
+        <h1 id="alert-title" class="font-display-xl text-display-xl text-surface-container-lowest tracking-tight leading-none">Hora do banho</h1>
+        <p id="alert-message" class="font-headline-md text-headline-md text-on-primary-container font-normal max-w-3xl leading-snug">Guardar os brinquedos e ir para o chuveiro.</p>
+      </div>
+
+      <div class="w-full pt-space-sm flex flex-col space-y-3">
+        <div class="flex justify-between items-baseline text-on-primary-container">
+          <span class="font-label-md text-label-md tracking-wider uppercase">Tempo Restante</span>
+          <span id="alert-remaining" class="font-headline-md text-headline-md text-surface-container-lowest font-medium tracking-tight">30s restantes</span>
+        </div>
+        <div class="w-full h-2 bg-on-primary-container/20 rounded-full overflow-hidden">
+          <div id="alert-bar" class="h-full bg-surface-container-lowest rounded-full transition-all duration-500 ease-linear" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="w-full flex justify-between items-center text-on-surface-variant/60 pt-space-md">
+      <span class="font-label-md text-label-md tracking-widest uppercase">MODO AVISO • TV 32"</span>
+      <div class="flex items-center space-x-4">
+        <span class="font-label-md text-label-md tracking-widest uppercase">COZINHA</span>
+        <span class="text-on-surface-variant/40">•</span>
+        <span id="alert-clock" class="font-label-md text-label-md tracking-widest uppercase">--:--</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. DADOS PADRÃO (exibidos antes da primeira edição no admin.html)
+    // =========================================================================
+    const DEFAULT_STATE = {
+      playlist: {
+        items: [
+          { id: "wilson",  type: "planner", target: "wilson",  label: "Planner — Wilson",   duration: 30, enabled: true, order: 0 },
+          { id: "rayssa",  type: "planner", target: "rayssa",  label: "Planner — Rayssa",   duration: 30, enabled: true, order: 1 },
+          { id: "meninos", type: "kids",                       label: "Rotina dos Meninos", duration: 30, enabled: true, order: 2 },
+          { id: "widgets", type: "widgets",                    label: "Relógio e Recado",   duration: 20, enabled: true, order: 3 },
+          { id: "fotos",   type: "photos",                     label: "Fotos da Família",   duration: 20, enabled: true, order: 4 }
+        ],
+        control: { pinnedId: null, paused: false, skipToken: 0, photosRefreshToken: 0 }
+      },
+      planners: {
+        wilson: [
+          { id: "w1", title: "Consultório Manhã", category: "Trabalho", time: "08:00", status: "feito" },
+          { id: "w2", title: "Almoço em Família", category: "Casa",     time: "12:30", status: "feito" },
+          { id: "w3", title: "Atendimento Tarde", category: "Trabalho", time: "14:30", status: "agora" },
+          { id: "w4", title: "Corrida / Pedal",   category: "Treino",   time: "18:30", status: "pendente" }
+        ],
+        rayssa: [
+          { id: "r1", title: "Atendimentos Manhã", category: "Estúdio", time: "09:00", status: "feito" },
+          { id: "r2", title: "Almoço em Família",  category: "Casa",    time: "12:30", status: "feito" },
+          { id: "r3", title: "Agenda da Tarde",    category: "Estúdio", time: "15:00", status: "agora" },
+          { id: "r4", title: "Organizar Mochilas", category: "Casa",    time: "19:30", status: "pendente" }
+        ],
+        meninos: [
+          { id: "m1", title: "Escovar os dentes",  subtitle: "Manhã & Noite",           icon: "tooth", status: "feito" },
+          { id: "m2", title: "Guardar brinquedos", subtitle: "Quarto e sala arrumados", icon: "toys",  status: "feito" },
+          { id: "m3", title: "Hora do banho",      subtitle: "Água morna e pijama",     icon: "bath",  status: "agora" },
+          { id: "m4", title: "Hora de dormir",     subtitle: "História e bons sonhos",  icon: "sleep", status: "falta" }
+        ]
+      },
+      memo: {
+        text: "Separar a mochila da escola e a garrafinha para amanhã cedo."
+      }
+    };
+
+    let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    let photos = [];
+    let currentPhotoIdx = 0;
+    let currentSlideIdx = 0;
+    let slideTimer = null;
+    let lastSkipToken = 0;
+    let lastPhotosRefreshToken = 0;
+    let lastAlertId = null;
+    let alertInterval = null;
+    let weatherData = { temp: "--°", desc: "Atualizando..." };
+
+    // =========================================================================
+    // 2. ÍCONES VETORIAIS (Rotina dos Meninos)
+    // =========================================================================
+    const KIDS_ICONS = {
+      tooth: `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4.5 9c0-3.5 2.5-6.5 7.5-6.5s7.5 3 7.5 6.5c0 4-1.5 8.5-3 12.5-1 1-3.5 1-4.5-1-1 2-3.5 2-4.5 1-1.5-4-3-8.5-3-12.5z"></path><path d="M8.5 7.5c1.5 1 5.5 1 7 0"></path><circle cx="12" cy="13" fill="currentColor" r="1"></circle></svg>`,
+      toys:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect height="8" rx="1.5" width="8" x="3" y="11"></rect><rect height="8" rx="1.5" width="8" x="13" y="11"></rect><rect height="8" rx="1.5" width="8" x="8" y="3"></rect><circle cx="7" cy="15" fill="currentColor" r="1"></circle><circle cx="17" cy="15" fill="currentColor" r="1"></circle><circle cx="12" cy="7" fill="currentColor" r="1"></circle></svg>`,
+      bath:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16c.6 0 1 .4 1 1v2a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2c0-.6.4-1 1-1Z"></path><path d="M6 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2"></path><path d="M5 21l1.5-2.5"></path><path d="M19 21l-1.5-2.5"></path></svg>`,
+      sleep: `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path><path d="M19 3v4"></path><path d="M21 5h-4"></path></svg>`,
+      book:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+      food:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>`,
+      star:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
+    };
+
+    // =========================================================================
+    // 3. UTILITÁRIOS DE DATA, HORA E ESCAPE HTML
+    // =========================================================================
+    function esc(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function getClockStr() {
+      const now = new Date();
+      return String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+    }
+
+    function getDateStr() {
+      const now = new Date();
+      const s = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function getWeekdayUpper() {
+      return new Date().toLocaleDateString("pt-BR", { weekday: "long" }).toUpperCase();
+    }
+
+    function updateAllClocks() {
+      const time = getClockStr();
+      const date = getDateStr();
+      document.querySelectorAll("[data-clock]").forEach(el => el.textContent = time);
+      document.querySelectorAll("[data-date]").forEach(el => el.textContent = date);
+      const alertClock = document.getElementById("alert-clock");
+      if (alertClock) alertClock.textContent = time;
+    }
+
+    // =========================================================================
+    // 4. CLIMA AUTOMÁTICO (Open-Meteo — gratuito e sem chave)
+    // =========================================================================
+    const WMO_DESC = {
+      0: "Céu limpo", 1: "Poucas nuvens", 2: "Parcialmente nublado", 3: "Nublado",
+      45: "Neblina", 48: "Neblina",
+      51: "Garoa leve", 53: "Garoa", 55: "Garoa forte",
+      61: "Chuva leve", 63: "Chuva moderada", 65: "Chuva forte",
+      80: "Pancadas leves", 81: "Pancadas de chuva", 82: "Chuva intensa",
+      95: "Trovoada", 96: "Trovoada com chuva", 99: "Tempestade"
+    };
+
+    async function fetchWeather() {
+      try {
+        const lat = window.APP_CONFIG?.weather?.lat ?? -0.8415;
+        const lon = window.APP_CONFIG?.weather?.lon ?? -52.5153;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data?.current) {
+          weatherData.temp = Math.round(data.current.temperature_2m) + "°";
+          weatherData.desc = WMO_DESC[data.current.weather_code] || "Tempo estável";
+          const tEl = document.getElementById("weather-temp");
+          const dEl = document.getElementById("weather-desc");
+          if (tEl) tEl.textContent = weatherData.temp;
+          if (dEl) dEl.textContent = weatherData.desc;
+        }
+      } catch (e) {
+        console.warn("Erro ao buscar clima:", e);
+      }
+    }
+
+    // =========================================================================
+    // 5. GOOGLE DRIVE — FOTOS DA FAMÍLIA
+    // =========================================================================
+    async function fetchDrivePhotos() {
+      const url = window.APP_CONFIG?.driveScriptUrl;
+      if (!url || url.includes("COLE_A_URL")) return;
+      try {
+        const res = await fetch(url + "?t=" + Date.now());
+        const list = await res.json();
+        if (Array.isArray(list)) {
+          photos = list.filter(item => item && item.url);
+          if (currentPhotoIdx >= photos.length) currentPhotoIdx = 0;
+        }
+      } catch (e) {
+        console.warn("Erro ao carregar fotos do Drive:", e);
+      }
+    }
+
+    // =========================================================================
+    // 6. SOM DE ALERTA SUAVE (Web Audio API — sem arquivo MP3 externo)
+    // =========================================================================
+    function playAlertChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const notes = [523.25, 659.25, 783.99]; // Dó - Mi - Sol
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          const start = ctx.currentTime + i * 0.16;
+          gain.gain.setValueAtTime(0.001, start);
+          gain.gain.exponentialRampToValueAtTime(0.25, start + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.55);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.6);
+        });
+      } catch (e) {
+        console.warn("Áudio bloqueado pelo navegador:", e);
+      }
+    }
+
+    function handleAlertUpdate(alertObj) {
+      const overlay = document.getElementById("alert-overlay");
+      if (!alertObj || !alertObj.id || !alertObj.triggeredAt) {
+        clearInterval(alertInterval);
+        overlay.classList.add("hidden");
+        return;
+      }
+
+      const duration = Math.max(5, Number(alertObj.duration) || 30);
+      const elapsedSec = (Date.now() - Number(alertObj.triggeredAt)) / 1000;
+      if (elapsedSec >= duration) {
+        clearInterval(alertInterval);
+        overlay.classList.add("hidden");
+        return;
+      }
+
+      document.getElementById("alert-title").textContent = alertObj.title || "Aviso";
+      document.getElementById("alert-message").textContent = alertObj.message || "";
+      overlay.classList.remove("hidden");
+
+      if (alertObj.id !== lastAlertId) {
+        lastAlertId = alertObj.id;
+        playAlertChime();
+      }
+
+      clearInterval(alertInterval);
+      const tick = () => {
+        const nowElapsed = (Date.now() - Number(alertObj.triggeredAt)) / 1000;
+        const remaining = Math.max(0, Math.ceil(duration - nowElapsed));
+        const pct = Math.max(0, Math.min(100, ((duration - nowElapsed) / duration) * 100));
+        document.getElementById("alert-bar").style.width = pct + "%";
+        document.getElementById("alert-remaining").textContent =
+          remaining >= 60
+            ? `${Math.ceil(remaining / 60)} min restantes`
+            : `${remaining}s restantes`;
+
+        if (remaining <= 0) {
+          clearInterval(alertInterval);
+          overlay.classList.add("hidden");
+        }
+      };
+      tick();
+      alertInterval = setInterval(tick, 500);
+    }
+
+    // =========================================================================
+    // 7. RENDERIZADORES DE CADA SLIDE
+    // =========================================================================
+    function renderPlannerSlide(personKey, displayName) {
+      const list = Array.isArray(state.planners?.[personKey])
+        ? state.planners[personKey]
+        : Object.values(state.planners?.[personKey] || {});
+
+      const doneCount = list.filter(t => t.status === "feito").length;
+      const cardsHtml = list.slice(0, 6).map(item => {
+        const isNow = item.status === "agora";
+        const isDone = item.status === "feito";
+        const badgeText = isNow ? "Agora" : (isDone ? "Feito" : "Pendente");
+        const badgeClass = isNow
+          ? "bg-primary text-on-primary"
+          : "bg-surface-container-high text-on-secondary-fixed";
+        const cardClass = isNow
+          ? "shadow-md outline outline-2 outline-offset-4 outline-primary"
+          : (isDone ? "shadow-sm opacity-75" : "shadow-sm");
+
+        return `
+          <article class="bg-surface-container-lowest rounded-2xl p-6 lg:p-7 flex items-center justify-between min-h-[7rem] ${cardClass}">
+            <div class="flex flex-col pr-4 min-w-0">
+              <h2 class="font-headline-lg text-headline-lg text-primary truncate leading-tight">${esc(item.title)}</h2>
+              <p class="font-body-lg text-body-lg text-secondary truncate mt-1">${esc(item.category || "Rotina")}</p>
+            </div>
+            <div class="flex flex-col items-end shrink-0 space-y-2">
+              <span class="font-headline-lg text-headline-lg text-primary tracking-tight">${esc(item.time || "--:--")}</span>
+              <span class="${badgeClass} font-label-md text-label-md px-4 py-1.5 rounded-full uppercase tracking-wider font-semibold">${badgeText}</span>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      const emptyHtml = `
+        <div class="col-span-2 bg-surface-container-lowest rounded-2xl p-12 text-center shadow-sm">
+          <p class="font-headline-lg text-headline-lg text-secondary">Nenhuma atividade cadastrada para hoje.</p>
+        </div>
+      `;
+
+      return `
+        <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
+          <section class="w-full bg-primary-container text-on-primary rounded-3xl p-8 lg:p-10 shadow-xl flex items-center justify-between">
+            <div class="flex flex-col justify-center space-y-1">
+              <span class="font-label-md text-label-md text-on-primary-container tracking-widest uppercase">ROTINA DO DIA</span>
+              <h1 class="font-display-xl text-display-xl text-on-primary tracking-tight">${esc(displayName)}</h1>
+            </div>
+            <div class="flex flex-col items-end justify-center text-right space-y-1">
+              <span data-date class="font-headline-md text-headline-md text-surface-container-highest font-normal">${getDateStr()}</span>
+              <div data-clock class="font-display-xl text-display-xl text-on-primary tracking-tight font-bold">${getClockStr()}</div>
+            </div>
+          </section>
+
+          <section class="w-full grid grid-cols-2 gap-gutter my-auto pt-4">
+            ${list.length ? cardsHtml : emptyHtml}
+          </section>
+
+          <footer class="w-full flex items-center justify-between pt-3 text-secondary font-label-md text-label-md">
+            <div class="flex items-center space-x-6">
+              <span>Concluídas: ${doneCount} de ${list.length}</span>
+              <span>•</span>
+              <span>Total planejado: ${list.length} atividades</span>
+            </div>
+            <div class="tracking-widest uppercase">TV Cozinha • Exibição Contínua</div>
+          </footer>
+        </div>
+      `;
+    }
+
+    function renderKidsSlide() {
+      const list = Array.isArray(state.planners?.meninos)
+        ? state.planners.meninos
+        : Object.values(state.planners?.meninos || {});
+
+      const total = list.length || 1;
+      const done = list.filter(m => m.status === "feito").length;
+      const pct = Math.round((done / total) * 100);
+      const circ = 188.5;
+      const offset = circ - (circ * pct) / 100;
+
+      const cardsHtml = list.slice(0, 4).map(m => {
+        const iconSvg = KIDS_ICONS[m.icon] || KIDS_ICONS.star;
+
+        if (m.status === "agora") {
+          return `
+            <div class="bg-surface-container-lowest rounded-[1.75rem] p-7 shadow-lg flex items-center justify-between relative">
+              <div class="absolute inset-0 rounded-[1.75rem] shadow-[inset_0_0_0_3px_#18181B] pointer-events-none"></div>
+              <div class="flex items-center gap-6 min-w-0">
+                <div class="w-20 h-20 rounded-2xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-md">${iconSvg}</div>
+                <div class="flex flex-col min-w-0">
+                  <div class="flex items-center gap-3">
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface truncate">${esc(m.title)}</h2>
+                    <span class="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></span>
+                  </div>
+                  <p class="font-body-xl text-body-xl text-on-surface-variant truncate mt-0.5">${esc(m.subtitle || "")}</p>
+                </div>
+              </div>
+              <div class="shrink-0 flex items-center gap-3 px-7 py-3 rounded-full bg-primary-container text-surface-container-lowest shadow-md">
+                <span class="w-2 h-2 rounded-full bg-surface-container-lowest"></span>
+                <span class="font-label-lg text-label-lg uppercase tracking-widest font-bold">AGORA</span>
+              </div>
+            </div>
+          `;
+        }
+
+        if (m.status === "feito") {
+          return `
+            <div class="bg-surface-container-lowest rounded-[1.75rem] p-7 shadow-sm flex items-center justify-between">
+              <div class="flex items-center gap-6 min-w-0">
+                <div class="w-20 h-20 rounded-2xl bg-surface-container-low text-primary flex items-center justify-center shrink-0">${iconSvg}</div>
+                <div class="flex flex-col min-w-0">
+                  <h2 class="font-headline-lg text-headline-lg text-on-surface truncate">${esc(m.title)}</h2>
+                  <p class="font-body-xl text-body-xl text-secondary truncate mt-0.5">${esc(m.subtitle || "")}</p>
+                </div>
+              </div>
+              <div class="shrink-0 flex items-center gap-2.5 px-6 py-3 rounded-full bg-surface-container-high text-on-surface">
+                <svg class="w-6 h-6 text-on-surface" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span class="font-label-lg text-label-lg uppercase tracking-wider font-bold">FEITO</span>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bg-surface-container-lowest rounded-[1.75rem] p-7 shadow-sm opacity-85 flex items-center justify-between">
+            <div class="flex items-center gap-6 min-w-0">
+              <div class="w-20 h-20 rounded-2xl bg-surface-container-low text-secondary flex items-center justify-center shrink-0">${iconSvg}</div>
+              <div class="flex flex-col min-w-0">
+                <h2 class="font-headline-lg text-headline-lg text-secondary truncate">${esc(m.title)}</h2>
+                <p class="font-body-xl text-body-xl text-outline truncate mt-0.5">${esc(m.subtitle || "")}</p>
+              </div>
+            </div>
+            <div class="shrink-0 px-7 py-3 rounded-full bg-surface-container-low text-secondary">
+              <span class="font-label-lg text-label-lg uppercase tracking-wider font-semibold">FALTA</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
+          <section class="bg-primary-container text-on-primary rounded-[1.75rem] px-10 py-7 shadow-xl flex items-center justify-between">
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-3">
+                <span class="font-label-md text-label-md uppercase tracking-[0.2em] text-on-primary-container">MISSÕES DE HOJE</span>
+                <span class="w-2 h-2 rounded-full bg-surface-container-lowest/30"></span>
+                <span class="font-label-md text-label-md uppercase tracking-wider text-on-primary-container">${getWeekdayUpper()}</span>
+              </div>
+              <h1 class="font-display-lg text-display-lg text-surface-container-lowest tracking-tight leading-none mt-1">Rotina dos Meninos</h1>
+            </div>
+
+            <div class="flex items-center gap-8 pl-8 border-l border-on-primary-container/20">
+              <div class="flex flex-col items-end">
+                <span class="font-display-xl text-display-xl leading-none text-surface-container-lowest">
+                  ${done}<span class="font-headline-lg text-on-primary-container mx-2">de</span>${list.length}
+                </span>
+                <span class="font-label-lg text-label-lg uppercase tracking-wider text-on-primary-container mt-1">completadas</span>
+              </div>
+              <div class="relative w-20 h-20 flex items-center justify-center">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" fill="none" r="30" stroke="#323338" stroke-width="7"></circle>
+                  <circle cx="36" cy="36" fill="none" r="30" stroke="#ffffff" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" stroke-width="7"></circle>
+                </svg>
+                <span class="absolute font-headline-md text-label-lg text-surface-container-lowest">${pct}%</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-2 gap-7 my-auto">${cardsHtml}</section>
+
+          <footer class="flex items-center justify-between pt-2 text-outline">
+            <div class="flex items-center gap-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-surface-dim"></span>
+              <p class="font-label-md text-label-md tracking-widest uppercase">MODO INFANTIL • TV COZINHA • EXIBIÇÃO CONTÍNUA</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <span data-clock class="font-label-lg text-label-lg text-on-surface">${getClockStr()}</span>
+              <span class="font-label-md text-label-md tracking-wider uppercase text-outline-variant">• ATUALIZADO AGORA</span>
+            </div>
+          </footer>
+        </div>
+      `;
+    }
+
+    function renderWidgetsSlide() {
+      const memoText = state.memo?.text || "Tudo em ordem por aqui.";
+      return `
+        <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
+          <section class="w-full bg-primary-container text-on-primary rounded-[2rem] p-space-lg shadow-xl">
+            <div class="flex flex-row items-end justify-between">
+              <div class="flex flex-col gap-2">
+                <span class="font-label-md text-label-md uppercase tracking-[0.2em] text-outline-variant">Horário Local</span>
+                <div data-clock class="font-display-xl text-[6rem] leading-[5.75rem] tracking-[-0.04em] font-bold text-on-primary">${getClockStr()}</div>
+                <div data-date class="font-body-xl text-body-xl text-outline-variant font-light tracking-wide mt-2">${getDateStr()}</div>
+              </div>
+              <div class="flex flex-col items-end text-right gap-2">
+                <span class="font-label-md text-label-md uppercase tracking-[0.2em] text-outline-variant">Temperatura Externa</span>
+                <div id="weather-temp" class="font-display-xl text-[5.5rem] leading-[5.25rem] tracking-[-0.03em] font-bold text-on-primary">${esc(weatherData.temp)}</div>
+                <div id="weather-desc" class="font-body-xl text-body-xl text-outline-variant font-light tracking-wide mt-2">${esc(weatherData.desc)}</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="w-full bg-surface-container-lowest text-on-surface rounded-[2rem] p-space-lg shadow-sm my-auto">
+            <div class="flex flex-col items-start gap-4">
+              <div class="bg-surface-container-highest px-4 py-1.5 rounded-full">
+                <span class="font-label-md text-label-md uppercase tracking-[0.25em] text-secondary font-semibold">Recado da Casa</span>
+              </div>
+              <p class="font-headline-xl text-headline-xl text-on-surface font-semibold leading-[1.25] tracking-tight max-w-5xl pt-2">
+                ${esc(memoText)}
+              </p>
+            </div>
+          </section>
+
+          <footer class="w-full flex flex-row items-center justify-between text-secondary pt-2">
+            <div class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full bg-outline"></span>
+              <span class="font-label-md text-label-md uppercase tracking-[0.15em] text-on-surface-variant">Modo Ambiente • TV Cozinha</span>
+            </div>
+            <span class="font-label-md text-label-md uppercase tracking-[0.15em] text-on-surface-variant">Laranjal do Jari</span>
+          </footer>
+        </div>
+      `;
+    }
+
+    function renderPhotosSlide() {
+      if (!photos.length) {
+        return `
+          <div class="w-full h-full p-margin box-border flex items-center justify-center slide-fade">
+            <div class="bg-primary-container text-on-primary rounded-3xl p-space-lg text-center max-w-2xl shadow-xl">
+              <span class="font-label-md text-label-md uppercase tracking-[0.25em] text-on-primary-container">FOTOS DA FAMÍLIA</span>
+              <h1 class="font-headline-xl text-headline-xl mt-3">Pasta do Drive vazia</h1>
+              <p class="font-body-xl text-body-xl text-on-primary-container mt-2">Adicione imagens na pasta compartilhada para exibir aqui.</p>
+            </div>
+          </div>
+        `;
+      }
+
+      const photo = photos[currentPhotoIdx % photos.length];
+      currentPhotoIdx = (currentPhotoIdx + 1) % photos.length;
+
+      return `
+        <div class="w-full h-full bg-primary-container relative flex items-center justify-center overflow-hidden slide-fade">
+          <img src="${esc(photo.url)}" alt="" class="w-full h-full object-contain"/>
+        </div>
+      `;
+    }
+
+    function renderStandbySlide() {
+      return `
+        <div class="w-full h-full bg-primary-container text-on-primary flex flex-col items-center justify-center slide-fade">
+          <div data-clock class="font-display-xl text-[7.5rem] leading-none tracking-tight font-bold">${getClockStr()}</div>
+          <div data-date class="font-headline-md text-headline-md text-on-primary-container mt-4 font-normal">${getDateStr()}</div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 8. MOTOR DA PLAYLIST
+    // =========================================================================
+    function getActivePlaylist() {
+      const raw = state.playlist?.items || [];
+      const arr = Array.isArray(raw) ? raw : Object.values(raw);
+      return arr
+        .filter(item => item && item.enabled)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+
+    function renderCurrentSlide() {
+      clearTimeout(slideTimer);
+      const stage = document.getElementById("stage");
+      const control = state.playlist?.control || {};
+      const activeList = getActivePlaylist();
+
+      if (!activeList.length) {
+        stage.innerHTML = renderStandbySlide();
+        return;
+      }
+
+      let slide = null;
+      if (control.pinnedId) {
+        const allRaw = state.playlist?.items || [];
+        const all = Array.isArray(allRaw) ? allRaw : Object.values(allRaw);
+        slide = all.find(s => s && s.id === control.pinnedId) || activeList[0];
+      } else {
+        if (currentSlideIdx >= activeList.length) currentSlideIdx = 0;
+        slide = activeList[currentSlideIdx];
+      }
+
+      if (slide.type === "planner") {
+        const displayName = slide.target === "rayssa" ? "Rayssa" : "Wilson";
+        stage.innerHTML = renderPlannerSlide(slide.target, displayName);
+      } else if (slide.type === "kids") {
+        stage.innerHTML = renderKidsSlide();
+      } else if (slide.type === "widgets") {
+        stage.innerHTML = renderWidgetsSlide();
+      } else if (slide.type === "photos") {
+        stage.innerHTML = renderPhotosSlide();
+      } else {
+        stage.innerHTML = renderStandbySlide();
+      }
+
+      if (!control.pinnedId && !control.paused && activeList.length > 1) {
+        const ms = Math.max(5, Number(slide.duration) || 20) * 1000;
+        slideTimer = setTimeout(() => {
+          currentSlideIdx = (currentSlideIdx + 1) % activeList.length;
+          renderCurrentSlide();
+        }, ms);
+      } else if (slide.type === "photos" && !control.paused && photos.length > 1) {
+        // Mesmo fixado em Fotos, avança para a próxima foto da pasta
+        const ms = Math.max(5, Number(slide.duration) || 20) * 1000;
+        slideTimer = setTimeout(() => renderCurrentSlide(), ms);
+      }
+    }
+
+    // =========================================================================
+    // 9. INICIALIZAÇÃO DO FIREBASE (Somente Leitura)
+    // =========================================================================
+    function initFirebase() {
+      const cfg = window.APP_CONFIG?.firebase;
+      if (!cfg || !cfg.databaseURL || cfg.apiKey === "SUA_API_KEY") {
+        console.warn("Firebase ainda não configurado em config.js — rodando em modo demonstração.");
+        renderCurrentSlide();
+        return;
+      }
+
+      firebase.initializeApp(cfg);
+      const db = firebase.database();
+
+      db.ref("playlist").on("value", snap => {
+        const val = snap.val();
+        if (val) {
+          if (val.items) state.playlist.items = val.items;
+          if (val.control) {
+            const ctrl = val.control;
+            state.playlist.control = ctrl;
+
+            // Comando "Pular" vindo do admin
+            if (ctrl.skipToken && ctrl.skipToken !== lastSkipToken) {
+              lastSkipToken = ctrl.skipToken;
+              const active = getActivePlaylist();
+              if (active.length) currentSlideIdx = (currentSlideIdx + 1) % active.length;
+            }
+            // Comando "Sincronizar Fotos" vindo do admin
+            if (ctrl.photosRefreshToken && ctrl.photosRefreshToken !== lastPhotosRefreshToken) {
+              lastPhotosRefreshToken = ctrl.photosRefreshToken;
+              fetchDrivePhotos();
+            }
+          }
+          renderCurrentSlide();
+        }
+      });
+
+      db.ref("planners").on("value", snap => {
+        const val = snap.val();
+        if (val) {
+          state.planners = { ...state.planners, ...val };
+          renderCurrentSlide();
+        }
+      });
+
+      db.ref("memo").on("value", snap => {
+        const val = snap.val();
+        if (val) {
+          state.memo = val;
+          renderCurrentSlide();
+        }
+      });
+
+      db.ref("alert").on("value", snap => {
+        handleAlertUpdate(snap.val());
+      });
+    }
+
+    // Boot
+    fetchWeather();
+    fetchDrivePhotos();
+    setInterval(updateAllClocks, 10000);
+    setInterval(fetchWeather, 30 * 60 * 1000);      // Atualiza clima a cada 30 min
+    setInterval(fetchDrivePhotos, 15 * 60 * 1000);  // Atualiza pasta do Drive a cada 15 min
+    renderCurrentSlide();
+    initFirebase();
+  </script>
+</body>
+</html>
