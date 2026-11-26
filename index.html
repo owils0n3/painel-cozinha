@@ -81,6 +81,21 @@
       box-shadow: inset 0 0 0 3px var(--accent);
     }
 
+    /* Barra de progresso acelerada por GPU (evita artefato no WebView Android) */
+    .progress-track {
+      position: relative;
+      overflow: hidden;
+      border-radius: 9999px;
+      transform: translateZ(0);
+      -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+    .progress-fill {
+      width: 100%;
+      height: 100%;
+      transform-origin: left center;
+      will-change: transform;
+    }
+
     .slide-fade {
       animation: fadeIn 0.35s ease-out;
     }
@@ -182,8 +197,8 @@
           <span class="font-label-md text-label-md tracking-wider uppercase">Tempo Restante</span>
           <span id="alert-remaining" class="font-headline-md text-headline-md text-on-hero font-medium tracking-tight">30s restantes</span>
         </div>
-        <div class="w-full h-2 bg-white/15 rounded-full overflow-hidden">
-          <div id="alert-bar" class="h-full bg-on-hero rounded-full transition-all duration-500 ease-linear" style="width: 100%;"></div>
+        <div class="progress-track w-full h-2.5 bg-white/15">
+          <div id="alert-bar" class="progress-fill bg-on-hero" style="transform: scaleX(1);"></div>
         </div>
       </div>
     </div>
@@ -206,7 +221,7 @@
     }
 
     function emptyWeek() {
-      return { seg: [], ter: [], qua: [], qui: [], sex: [], sab: [], dom: [] };
+      return { _v: 2, seg: [], ter: [], qua: [], qui: [], sex: [], sab: [], dom: [] };
     }
 
     // =========================================================================
@@ -246,21 +261,21 @@
     let lastSkipToken = 0;
     let lastPhotosRefreshToken = 0;
     let lastAlertId = null;
-    let alertInterval = null;
+    let alertRafId = null;
     let lastRenderedDayKey = getTodayKey();
     let weatherData = { temp: "--°", desc: "Atualizando..." };
 
     // =========================================================================
-    // 2. ÍCONES VETORIAIS (Rotina dos Meninos)
+    // 2. ÍCONES VETORIAIS (Rotina dos Meninos — escalam com o container)
     // =========================================================================
     const KIDS_ICONS = {
-      tooth: `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4.5 9c0-3.5 2.5-6.5 7.5-6.5s7.5 3 7.5 6.5c0 4-1.5 8.5-3 12.5-1 1-3.5 1-4.5-1-1 2-3.5 2-4.5 1-1.5-4-3-8.5-3-12.5z"></path><path d="M8.5 7.5c1.5 1 5.5 1 7 0"></path><circle cx="12" cy="13" fill="currentColor" r="1"></circle></svg>`,
-      toys:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect height="8" rx="1.5" width="8" x="3" y="11"></rect><rect height="8" rx="1.5" width="8" x="13" y="11"></rect><rect height="8" rx="1.5" width="8" x="8" y="3"></rect><circle cx="7" cy="15" fill="currentColor" r="1"></circle><circle cx="17" cy="15" fill="currentColor" r="1"></circle><circle cx="12" cy="7" fill="currentColor" r="1"></circle></svg>`,
-      bath:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16c.6 0 1 .4 1 1v2a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2c0-.6.4-1 1-1Z"></path><path d="M6 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2"></path><path d="M5 21l1.5-2.5"></path><path d="M19 21l-1.5-2.5"></path></svg>`,
-      sleep: `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path><path d="M19 3v4"></path><path d="M21 5h-4"></path></svg>`,
-      book:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
-      food:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>`,
-      star:  `<svg class="w-12 h-12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
+      tooth: `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4.5 9c0-3.5 2.5-6.5 7.5-6.5s7.5 3 7.5 6.5c0 4-1.5 8.5-3 12.5-1 1-3.5 1-4.5-1-1 2-3.5 2-4.5 1-1.5-4-3-8.5-3-12.5z"></path><path d="M8.5 7.5c1.5 1 5.5 1 7 0"></path><circle cx="12" cy="13" fill="currentColor" r="1"></circle></svg>`,
+      toys:  `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect height="8" rx="1.5" width="8" x="3" y="11"></rect><rect height="8" rx="1.5" width="8" x="13" y="11"></rect><rect height="8" rx="1.5" width="8" x="8" y="3"></rect><circle cx="7" cy="15" fill="currentColor" r="1"></circle><circle cx="17" cy="15" fill="currentColor" r="1"></circle><circle cx="12" cy="7" fill="currentColor" r="1"></circle></svg>`,
+      bath:  `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12h16c.6 0 1 .4 1 1v2a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2c0-.6.4-1 1-1Z"></path><path d="M6 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2"></path><path d="M5 21l1.5-2.5"></path><path d="M19 21l-1.5-2.5"></path></svg>`,
+      sleep: `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path><path d="M19 3v4"></path><path d="M21 5h-4"></path></svg>`,
+      book:  `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+      food:  `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>`,
+      star:  `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
     };
 
     // =========================================================================
@@ -297,7 +312,6 @@
       const alertClock = document.getElementById("alert-clock");
       if (alertClock) alertClock.textContent = time;
 
-      // Se virou a meia-noite, atualiza o slide para puxar as tarefas do novo dia
       const todayKey = getTodayKey();
       if (todayKey !== lastRenderedDayKey) {
         lastRenderedDayKey = todayKey;
@@ -308,11 +322,11 @@
     function getPersonTodayTasks(personKey) {
       const raw = state.planners?.[personKey];
       let list = [];
-      if (Array.isArray(raw)) {
-        list = raw; // compatibilidade com formato antigo
-      } else if (raw && typeof raw === "object") {
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
         const dayData = raw[getTodayKey()];
         list = Array.isArray(dayData) ? dayData : Object.values(dayData || {});
+      } else if (Array.isArray(raw)) {
+        list = raw;
       }
       return list
         .filter(Boolean)
@@ -370,7 +384,7 @@
     }
 
     // =========================================================================
-    // 6. SOM DE ALERTA NÍTIDO (~3,2 segundos — 3 pulsos de sino duplo)
+    // 6. SOM DE ALERTA NÍTIDO (~3,2 segundos) + BARRA GPU SEM GLITCH
     // =========================================================================
     function playAlertChime() {
       try {
@@ -396,7 +410,6 @@
           osc1.type = "triangle";
           osc1.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
 
-          // Harmônico sutil uma oitava acima para cortar o ruído da cozinha
           osc2.type = "sine";
           osc2.frequency.setValueAtTime(freq * 2, ctx.currentTime + startOffset);
 
@@ -419,10 +432,9 @@
           osc2.stop(t0 + dur + 0.05);
         };
 
-        // 3 ciclos de alerta espaçados (~3,2s no total)
         [0.0, 1.05, 2.1].forEach(cycle => {
-          playTone(783.99, cycle,        0.38, 0.85); // Sol 5
-          playTone(1046.5, cycle + 0.24, 0.72, 0.95); // Dó 6
+          playTone(783.99, cycle,        0.38, 0.85);
+          playTone(1046.5, cycle + 0.24, 0.72, 0.95);
         });
 
         setTimeout(() => { try { ctx.close(); } catch (_) {} }, 3800);
@@ -431,18 +443,26 @@
       }
     }
 
+    function stopAlertLoop() {
+      if (alertRafId !== null) {
+        cancelAnimationFrame(alertRafId);
+        alertRafId = null;
+      }
+    }
+
     function handleAlertUpdate(alertObj) {
       const overlay = document.getElementById("alert-overlay");
+      stopAlertLoop();
+
       if (!alertObj || !alertObj.id || !alertObj.triggeredAt) {
-        clearInterval(alertInterval);
         overlay.classList.add("hidden");
         return;
       }
 
-      const duration = Math.max(5, Number(alertObj.duration) || 30);
-      const elapsedSec = (Date.now() - Number(alertObj.triggeredAt)) / 1000;
-      if (elapsedSec >= duration) {
-        clearInterval(alertInterval);
+      const durationMs = Math.max(5, Number(alertObj.duration) || 30) * 1000;
+      const startTime = Number(alertObj.triggeredAt);
+
+      if (Date.now() - startTime >= durationMs) {
         overlay.classList.add("hidden");
         return;
       }
@@ -456,53 +476,106 @@
         playAlertChime();
       }
 
-      clearInterval(alertInterval);
-      const tick = () => {
-        const nowElapsed = (Date.now() - Number(alertObj.triggeredAt)) / 1000;
-        const remaining = Math.max(0, Math.ceil(duration - nowElapsed));
-        const pct = Math.max(0, Math.min(100, ((duration - nowElapsed) / duration) * 100));
-        document.getElementById("alert-bar").style.width = pct + "%";
-        document.getElementById("alert-remaining").textContent =
-          remaining >= 60
-            ? `${Math.ceil(remaining / 60)} min restantes`
-            : `${remaining}s restantes`;
+      const barEl = document.getElementById("alert-bar");
+      const remEl = document.getElementById("alert-remaining");
+      let lastText = "";
 
-        if (remaining <= 0) {
-          clearInterval(alertInterval);
-          overlay.classList.add("hidden");
+      const frame = () => {
+        const elapsed = Date.now() - startTime;
+        const ratio = Math.max(0, Math.min(1, 1 - elapsed / durationMs));
+        barEl.style.transform = `scaleX(${ratio.toFixed(4)})`;
+
+        const remSec = Math.max(0, Math.ceil((durationMs - elapsed) / 1000));
+        const txt = remSec >= 60
+          ? `${Math.ceil(remSec / 60)} min restantes`
+          : `${remSec}s restantes`;
+        if (txt !== lastText) {
+          lastText = txt;
+          remEl.textContent = txt;
         }
+
+        if (elapsed >= durationMs) {
+          stopAlertLoop();
+          overlay.classList.add("hidden");
+          return;
+        }
+        alertRafId = requestAnimationFrame(frame);
       };
-      tick();
-      alertInterval = setInterval(tick, 500);
+
+      alertRafId = requestAnimationFrame(frame);
     }
 
     // =========================================================================
-    // 7. RENDERIZADORES DE CADA SLIDE
+    // 7. RENDERIZADORES COM ESCALA DINÂMICA (a partir da 7ª tarefa)
     // =========================================================================
     function renderPlannerSlide(personKey, displayName) {
       const list = getPersonTodayTasks(personKey);
+      const count = list.length;
       const doneCount = list.filter(t => t.status === "feito").length;
 
-      const cardsHtml = list.slice(0, 6).map(item => {
+      // Escala progressiva conforme a quantidade de tarefas no dia
+      let heroPad = "p-8 lg:p-10";
+      let heroTitle = "font-display-xl text-display-xl";
+      let gridCls = "grid-cols-2 gap-gutter";
+      let cardPad = "p-6 lg:p-7 min-h-[7rem] rounded-2xl";
+      let titleCls = "font-headline-lg text-headline-lg";
+      let catCls = "font-body-lg text-body-lg mt-1";
+      let timeCls = "font-headline-lg text-headline-lg";
+      let badgeCls = "font-label-md text-label-md px-4 py-1.5";
+      let rightGap = "space-y-2";
+
+      if (count >= 7 && count <= 8) {
+        heroPad = "p-6 lg:p-7";
+        heroTitle = "font-display-lg text-display-lg";
+        gridCls = "grid-cols-2 gap-4";
+        cardPad = "p-4 lg:p-5 min-h-[5.25rem] rounded-2xl";
+        titleCls = "font-headline-lg text-[1.65rem] leading-tight font-semibold";
+        catCls = "font-body-lg text-[1.05rem] leading-snug mt-0.5";
+        timeCls = "font-headline-lg text-[1.55rem] leading-tight font-semibold";
+        badgeCls = "font-label-md text-[0.85rem] leading-none px-3.5 py-1.5";
+        rightGap = "space-y-1.5";
+      } else if (count >= 9 && count <= 12) {
+        heroPad = "p-5 lg:p-6";
+        heroTitle = "font-display-lg text-display-lg";
+        gridCls = "grid-cols-3 gap-4";
+        cardPad = "p-4 min-h-[4.75rem] rounded-2xl";
+        titleCls = "font-headline-lg text-[1.35rem] leading-tight font-semibold";
+        catCls = "font-body-lg text-[0.95rem] leading-snug mt-0.5";
+        timeCls = "font-headline-lg text-[1.3rem] leading-tight font-semibold";
+        badgeCls = "font-label-md text-[0.75rem] leading-none px-3 py-1";
+        rightGap = "space-y-1";
+      } else if (count > 12) {
+        heroPad = "p-5";
+        heroTitle = "font-headline-xl text-headline-xl";
+        gridCls = "grid-cols-3 gap-3";
+        cardPad = "p-3 min-h-[3.75rem] rounded-xl";
+        titleCls = "font-headline-lg text-[1.1rem] leading-tight font-semibold";
+        catCls = "font-body-lg text-[0.85rem] leading-snug";
+        timeCls = "font-headline-lg text-[1.1rem] leading-tight font-semibold";
+        badgeCls = "font-label-md text-[0.7rem] leading-none px-2.5 py-1";
+        rightGap = "space-y-1";
+      }
+
+      const cardsHtml = list.map(item => {
         const isNow = item.status === "agora";
         const isDone = item.status === "feito";
         const badgeText = isNow ? "Agora" : (isDone ? "Feito" : "Pendente");
-        const badgeClass = isNow
+        const badgeStyle = isNow
           ? "bg-accent text-on-accent"
           : "bg-pill text-ink";
-        const cardClass = isNow
+        const cardStyle = isNow
           ? "shadow-md active-outline"
           : (isDone ? "shadow-sm opacity-65" : "shadow-sm");
 
         return `
-          <article class="surface-card rounded-2xl p-6 lg:p-7 flex items-center justify-between min-h-[7rem] ${cardClass}">
-            <div class="flex flex-col pr-4 min-w-0">
-              <h2 class="font-headline-lg text-headline-lg text-ink truncate leading-tight">${esc(item.title)}</h2>
-              <p class="font-body-lg text-body-lg text-ink-sec truncate mt-1">${esc(item.category || "Rotina")}</p>
+          <article class="surface-card ${cardPad} flex items-center justify-between ${cardStyle}">
+            <div class="flex flex-col pr-3 min-w-0">
+              <h2 class="${titleCls} text-ink truncate">${esc(item.title)}</h2>
+              <p class="${catCls} text-ink-sec truncate">${esc(item.category || "Rotina")}</p>
             </div>
-            <div class="flex flex-col items-end shrink-0 space-y-2">
-              <span class="font-headline-lg text-headline-lg text-ink tracking-tight">${esc(item.time || "--:--")}</span>
-              <span class="${badgeClass} font-label-md text-label-md px-4 py-1.5 rounded-full uppercase tracking-wider font-semibold">${badgeText}</span>
+            <div class="flex flex-col items-end shrink-0 ${rightGap}">
+              <span class="${timeCls} text-ink tracking-tight">${esc(item.time || "--:--")}</span>
+              <span class="${badgeStyle} ${badgeCls} rounded-full uppercase tracking-wider font-semibold">${badgeText}</span>
             </div>
           </article>
         `;
@@ -516,26 +589,26 @@
 
       return `
         <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
-          <section class="hero-card w-full rounded-3xl p-8 lg:p-10 shadow-xl flex items-center justify-between">
+          <section class="hero-card w-full rounded-3xl ${heroPad} shadow-xl flex items-center justify-between">
             <div class="flex flex-col justify-center space-y-1">
               <span class="font-label-md text-label-md text-hero-muted tracking-widest uppercase">ROTINA DO DIA</span>
-              <h1 class="font-display-xl text-display-xl text-on-hero tracking-tight">${esc(displayName)}</h1>
+              <h1 class="${heroTitle} text-on-hero tracking-tight">${esc(displayName)}</h1>
             </div>
             <div class="flex flex-col items-end justify-center text-right space-y-1">
               <span data-date class="font-headline-md text-headline-md text-hero-muted font-normal">${getDateStr()}</span>
-              <div data-clock class="font-display-xl text-display-xl text-on-hero tracking-tight font-bold">${getClockStr()}</div>
+              <div data-clock class="${heroTitle} text-on-hero tracking-tight font-bold">${getClockStr()}</div>
             </div>
           </section>
 
-          <section class="w-full grid grid-cols-2 gap-gutter my-auto pt-4">
-            ${list.length ? cardsHtml : emptyHtml}
+          <section class="w-full grid ${gridCls} my-auto pt-4">
+            ${count ? cardsHtml : emptyHtml}
           </section>
 
           <footer class="w-full flex items-center justify-between pt-3 text-ink-sec font-label-md text-label-md">
             <div class="flex items-center space-x-6">
-              <span>Concluídas: ${doneCount} de ${list.length}</span>
+              <span>Concluídas: ${doneCount} de ${count}</span>
               <span>•</span>
-              <span>Total planejado: ${list.length} atividades</span>
+              <span>Total planejado: ${count} atividades</span>
             </div>
             <div class="tracking-widest uppercase">TV Cozinha • Exibição Contínua</div>
           </footer>
@@ -545,34 +618,78 @@
 
     function renderKidsSlide() {
       const list = Array.isArray(state.planners?.meninos)
-        ? state.planners.meninos
-        : Object.values(state.planners?.meninos || {});
+        ? state.planners.meninos.filter(Boolean)
+        : Object.values(state.planners?.meninos || {}).filter(Boolean);
 
-      const total = list.length || 1;
+      const count = list.length;
+      const total = count || 1;
       const done = list.filter(m => m.status === "feito").length;
       const pct = Math.round((done / total) * 100);
       const circ = 188.5;
       const offset = circ - (circ * pct) / 100;
 
-      const cardsHtml = list.slice(0, 4).map(m => {
+      // Escala progressiva para Rotina dos Meninos (sem cortar nenhum item)
+      let gridCls = "grid-cols-2 gap-7";
+      let cardPad = "p-7 rounded-[1.75rem]";
+      let innerGap = "gap-6";
+      let iconBox = "w-20 h-20 p-4 rounded-2xl";
+      let titleCls = "font-headline-lg text-headline-lg";
+      let subCls = "font-body-xl text-body-xl mt-0.5";
+      let pillPad = "px-6 py-3";
+      let pillTxt = "font-label-lg text-label-lg";
+      let checkSize = "w-6 h-6";
+
+      if (count >= 5 && count <= 6) {
+        gridCls = "grid-cols-2 gap-5";
+        cardPad = "p-5 rounded-2xl";
+        innerGap = "gap-4";
+        iconBox = "w-16 h-16 p-3.5 rounded-2xl";
+        titleCls = "font-headline-lg text-[1.7rem] leading-tight font-semibold";
+        subCls = "font-body-lg text-[1.1rem] leading-snug mt-0.5";
+        pillPad = "px-5 py-2";
+        pillTxt = "font-label-md text-[0.95rem] leading-none";
+        checkSize = "w-5 h-5";
+      } else if (count >= 7 && count <= 9) {
+        gridCls = "grid-cols-3 gap-4";
+        cardPad = "p-4 rounded-2xl";
+        innerGap = "gap-3.5";
+        iconBox = "w-12 h-12 p-2.5 rounded-xl";
+        titleCls = "font-headline-lg text-[1.25rem] leading-tight font-semibold";
+        subCls = "font-body-lg text-[0.95rem] leading-snug mt-0.5";
+        pillPad = "px-3.5 py-1.5";
+        pillTxt = "font-label-md text-[0.8rem] leading-none";
+        checkSize = "w-4 h-4";
+      } else if (count > 9) {
+        gridCls = "grid-cols-3 gap-3";
+        cardPad = "p-3 rounded-xl";
+        innerGap = "gap-3";
+        iconBox = "w-10 h-10 p-2 rounded-lg";
+        titleCls = "font-headline-lg text-[1.1rem] leading-tight font-semibold";
+        subCls = "font-body-lg text-[0.85rem] leading-snug";
+        pillPad = "px-2.5 py-1";
+        pillTxt = "font-label-md text-[0.72rem] leading-none";
+        checkSize = "w-3.5 h-3.5";
+      }
+
+      const cardsHtml = list.map(m => {
         const iconSvg = KIDS_ICONS[m.icon] || KIDS_ICONS.star;
 
         if (m.status === "agora") {
           return `
-            <div class="surface-card active-outline rounded-[1.75rem] p-7 shadow-lg flex items-center justify-between relative">
-              <div class="flex items-center gap-6 min-w-0">
-                <div class="w-20 h-20 rounded-2xl bg-accent text-on-accent flex items-center justify-center shrink-0 shadow-md">${iconSvg}</div>
+            <div class="surface-card active-outline ${cardPad} shadow-lg flex items-center justify-between gap-3 relative">
+              <div class="flex items-center ${innerGap} min-w-0">
+                <div class="${iconBox} bg-accent text-on-accent flex items-center justify-center shrink-0 shadow-md">${iconSvg}</div>
                 <div class="flex flex-col min-w-0">
-                  <div class="flex items-center gap-3">
-                    <h2 class="font-headline-lg text-headline-lg text-ink truncate">${esc(m.title)}</h2>
-                    <span class="w-2.5 h-2.5 rounded-full bg-accent animate-ping"></span>
+                  <div class="flex items-center gap-2.5">
+                    <h2 class="${titleCls} text-ink truncate">${esc(m.title)}</h2>
+                    <span class="w-2.5 h-2.5 rounded-full bg-accent animate-ping shrink-0"></span>
                   </div>
-                  <p class="font-body-xl text-body-xl text-ink-sec truncate mt-0.5">${esc(m.subtitle || "")}</p>
+                  <p class="${subCls} text-ink-sec truncate">${esc(m.subtitle || "")}</p>
                 </div>
               </div>
-              <div class="shrink-0 flex items-center gap-3 px-7 py-3 rounded-full bg-accent text-on-accent shadow-md">
+              <div class="shrink-0 flex items-center gap-2 ${pillPad} rounded-full bg-accent text-on-accent shadow-md">
                 <span class="w-2 h-2 rounded-full bg-on-accent"></span>
-                <span class="font-label-lg text-label-lg uppercase tracking-widest font-bold">AGORA</span>
+                <span class="${pillTxt} uppercase tracking-widest font-bold">AGORA</span>
               </div>
             </div>
           `;
@@ -580,33 +697,33 @@
 
         if (m.status === "feito") {
           return `
-            <div class="surface-card rounded-[1.75rem] p-7 shadow-sm flex items-center justify-between">
-              <div class="flex items-center gap-6 min-w-0">
-                <div class="w-20 h-20 rounded-2xl bg-subtle text-ink flex items-center justify-center shrink-0">${iconSvg}</div>
+            <div class="surface-card ${cardPad} shadow-sm flex items-center justify-between gap-3">
+              <div class="flex items-center ${innerGap} min-w-0">
+                <div class="${iconBox} bg-subtle text-ink flex items-center justify-center shrink-0">${iconSvg}</div>
                 <div class="flex flex-col min-w-0">
-                  <h2 class="font-headline-lg text-headline-lg text-ink truncate">${esc(m.title)}</h2>
-                  <p class="font-body-xl text-body-xl text-ink-sec truncate mt-0.5">${esc(m.subtitle || "")}</p>
+                  <h2 class="${titleCls} text-ink truncate">${esc(m.title)}</h2>
+                  <p class="${subCls} text-ink-sec truncate">${esc(m.subtitle || "")}</p>
                 </div>
               </div>
-              <div class="shrink-0 flex items-center gap-2.5 px-6 py-3 rounded-full bg-pill text-ink">
-                <svg class="w-6 h-6 text-ink" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span class="font-label-lg text-label-lg uppercase tracking-wider font-bold">FEITO</span>
+              <div class="shrink-0 flex items-center gap-2 ${pillPad} rounded-full bg-pill text-ink">
+                <svg class="${checkSize} text-ink" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span class="${pillTxt} uppercase tracking-wider font-bold">FEITO</span>
               </div>
             </div>
           `;
         }
 
         return `
-          <div class="surface-card rounded-[1.75rem] p-7 shadow-sm opacity-80 flex items-center justify-between">
-            <div class="flex items-center gap-6 min-w-0">
-              <div class="w-20 h-20 rounded-2xl bg-subtle text-ink-sec flex items-center justify-center shrink-0">${iconSvg}</div>
+          <div class="surface-card ${cardPad} shadow-sm opacity-80 flex items-center justify-between gap-3">
+            <div class="flex items-center ${innerGap} min-w-0">
+              <div class="${iconBox} bg-subtle text-ink-sec flex items-center justify-center shrink-0">${iconSvg}</div>
               <div class="flex flex-col min-w-0">
-                <h2 class="font-headline-lg text-headline-lg text-ink-sec truncate">${esc(m.title)}</h2>
-                <p class="font-body-xl text-body-xl text-ink-muted truncate mt-0.5">${esc(m.subtitle || "")}</p>
+                <h2 class="${titleCls} text-ink-sec truncate">${esc(m.title)}</h2>
+                <p class="${subCls} text-ink-muted truncate">${esc(m.subtitle || "")}</p>
               </div>
             </div>
-            <div class="shrink-0 px-7 py-3 rounded-full bg-subtle text-ink-sec">
-              <span class="font-label-lg text-label-lg uppercase tracking-wider font-semibold">FALTA</span>
+            <div class="shrink-0 ${pillPad} rounded-full bg-subtle text-ink-sec">
+              <span class="${pillTxt} uppercase tracking-wider font-semibold">FALTA</span>
             </div>
           </div>
         `;
@@ -614,7 +731,7 @@
 
       return `
         <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
-          <section class="hero-card rounded-[1.75rem] px-10 py-7 shadow-xl flex items-center justify-between">
+          <section class="hero-card rounded-[1.75rem] px-10 py-6 shadow-xl flex items-center justify-between">
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-3">
                 <span class="font-label-md text-label-md uppercase tracking-[0.2em] text-hero-muted">MISSÕES DE HOJE</span>
@@ -627,7 +744,7 @@
             <div class="flex items-center gap-8 pl-8 border-l border-white/15">
               <div class="flex flex-col items-end">
                 <span class="font-display-xl text-display-xl leading-none text-on-hero">
-                  ${done}<span class="font-headline-lg text-hero-muted mx-2">de</span>${list.length}
+                  ${done}<span class="font-headline-lg text-hero-muted mx-2">de</span>${count}
                 </span>
                 <span class="font-label-lg text-label-lg uppercase tracking-wider text-hero-muted mt-1">completadas</span>
               </div>
@@ -641,7 +758,7 @@
             </div>
           </section>
 
-          <section class="grid grid-cols-2 gap-7 my-auto">${cardsHtml}</section>
+          <section class="grid ${gridCls} my-auto">${cardsHtml}</section>
 
           <footer class="flex items-center justify-between pt-2 text-ink-muted">
             <div class="flex items-center gap-3">
@@ -806,10 +923,8 @@
       firebase.initializeApp(cfg);
       const db = firebase.database();
 
-      // Tema sincronizado (Claro / Escuro Apple)
       db.ref("settings/theme").on("value", snap => {
-        const theme = snap.val();
-        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.classList.toggle("dark", snap.val() === "dark");
       });
 
       db.ref("playlist").on("value", snap => {
@@ -840,7 +955,11 @@
       db.ref("planners").on("value", snap => {
         const val = snap.val();
         if (val) {
-          state.planners = { ...state.planners, ...val };
+          state.planners = {
+            wilson: val.wilson ?? emptyWeek(),
+            rayssa: val.rayssa ?? emptyWeek(),
+            meninos: val.meninos ?? []
+          };
           renderCurrentSlide();
         }
       });
@@ -864,6 +983,9 @@
     setInterval(updateAllClocks, 10000);
     setInterval(fetchWeather, 30 * 60 * 1000);
     setInterval(fetchDrivePhotos, 15 * 60 * 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) updateAllClocks();
+    });
     renderCurrentSlide();
     initFirebase();
   </script>
