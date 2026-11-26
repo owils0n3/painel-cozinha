@@ -78,7 +78,6 @@
       transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
-    /* Retorno tátil universal para todos os botões */
     .btn-anim {
       transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
                   background-color 0.22s ease,
@@ -90,7 +89,6 @@
       transform: scale(0.95);
     }
 
-    /* Switch com animação real de deslizamento */
     .toggle-switch {
       position: relative;
       width: 48px;
@@ -127,7 +125,6 @@
       transform: translateX(20px);
     }
 
-    /* Ícone de pino girando quando fixado */
     .pin-icon {
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
@@ -135,7 +132,6 @@
       transform: rotate(-35deg) scale(1.1);
     }
 
-    /* Giro suave do botão sincronizar */
     @keyframes spinOnce {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
@@ -144,7 +140,6 @@
       animation: spinOnce 0.6s ease-in-out;
     }
 
-    /* Modal animado */
     #task-modal {
       transition: opacity 0.22s ease;
     }
@@ -156,7 +151,6 @@
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* Toast animado */
     #toast {
       transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
     }
@@ -208,9 +202,7 @@
 
 <body class="bg-surface font-sans text-ink antialiased min-h-screen flex flex-col">
 
-  <!-- ===================================================================== -->
-  <!-- TELA DE LOGIN                                                         -->
-  <!-- ===================================================================== -->
+  <!-- TELA DE LOGIN -->
   <section id="login-view" class="hidden flex-1 flex flex-col justify-center px-6 py-10 max-w-md w-full mx-auto">
     <div class="hero-card rounded-3xl p-7 shadow-xl mb-6">
       <span class="text-xs uppercase tracking-[0.2em] text-hero-muted font-semibold">PAINEL DA COZINHA</span>
@@ -237,17 +229,12 @@
     </form>
   </section>
 
-  <!-- ===================================================================== -->
-  <!-- PAINEL PRINCIPAL (AUTENTICADO)                                        -->
-  <!-- ===================================================================== -->
+  <!-- PAINEL PRINCIPAL -->
   <div id="app-view" class="hidden flex-1 flex flex-col max-w-lg w-full mx-auto px-5 pt-safe pb-24">
-
-    <!-- Cabeçalho -->
     <header class="flex flex-col pt-2 pb-4">
       <div class="flex items-center justify-between mb-1">
         <span class="text-xs uppercase tracking-[0.16em] text-ink-sec font-semibold">Painel da Cozinha</span>
         <div class="flex items-center gap-2">
-          <!-- Botão Modo Escuro (sincroniza Painel + TV) -->
           <button id="theme-btn" aria-label="Alternar modo escuro"
             class="btn-anim inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-subtle text-ink cursor-pointer">
             <span id="theme-icon" class="material-symbols-outlined text-base leading-none">dark_mode</span>
@@ -263,7 +250,6 @@
 
       <h1 id="page-title" class="font-display text-3xl text-ink font-bold tracking-tight mt-1">Programação</h1>
 
-      <!-- Abas -->
       <nav class="flex items-center gap-7 mt-5 border-b border-pill">
         <button data-tab="playlist" class="tab-btn btn-anim relative pb-2.5 text-base font-semibold text-ink cursor-pointer">
           Playlist
@@ -280,9 +266,7 @@
       </nav>
     </header>
 
-    <!-- =================================================================== -->
-    <!-- ABA 1: PLAYLIST                                                     -->
-    <!-- =================================================================== -->
+    <!-- ABA 1: PLAYLIST -->
     <section id="tab-playlist" class="flex flex-col gap-5">
       <div class="hero-card rounded-2xl p-5 shadow-xl relative overflow-hidden">
         <div class="flex items-center justify-between gap-2 mb-3">
@@ -323,11 +307,8 @@
       <div id="playlist-list" class="flex flex-col gap-3"></div>
     </section>
 
-    <!-- =================================================================== -->
-    <!-- ABA 2: PLANNERS (SEMANAL) & RECADO                                  -->
-    <!-- =================================================================== -->
+    <!-- ABA 2: PLANNERS & RECADO -->
     <section id="tab-planners" class="hidden flex flex-col gap-4">
-      <!-- Seletor de Pessoa / Recado -->
       <div class="grid grid-cols-4 gap-1.5 bg-subtle p-1 rounded-2xl">
         <button data-target="wilson"  class="planner-subbtn btn-anim py-2 rounded-xl text-xs font-semibold bg-accent text-on-accent cursor-pointer">Wilson</button>
         <button data-target="rayssa"  class="planner-subbtn btn-anim py-2 rounded-xl text-xs font-semibold text-ink-sec cursor-pointer">Rayssa</button>
@@ -335,10 +316,8 @@
         <button data-target="recado"  class="planner-subbtn btn-anim py-2 rounded-xl text-xs font-semibold text-ink-sec cursor-pointer">Recado</button>
       </div>
 
-      <!-- Barra de Dias da Semana (visível para Wilson e Rayssa) -->
       <div id="week-bar" class="grid grid-cols-7 gap-1 bg-subtle p-1 rounded-2xl"></div>
 
-      <!-- Cabeçalho da lista -->
       <div id="planner-list-header" class="flex items-center justify-between px-1">
         <span id="planner-hint" class="text-xs text-ink-sec">Toque no status para alternar</span>
         <button id="btn-reset-day" class="btn-anim text-xs font-semibold px-3 py-1 rounded-full bg-subtle text-ink cursor-pointer">
@@ -346,10 +325,8 @@
         </button>
       </div>
 
-      <!-- Lista de tarefas -->
       <div id="planner-items" class="flex flex-col gap-2.5"></div>
 
-      <!-- Editor do Recado da Casa -->
       <div id="memo-editor" class="hidden surface-card rounded-2xl p-5 shadow-sm flex flex-col gap-3">
         <label class="text-xs uppercase tracking-wider font-semibold text-ink-sec">Recado exibido na TV</label>
         <textarea id="memo-input" rows="4" placeholder="Escreva um recado curto e direto..."
@@ -360,11 +337,8 @@
       </div>
     </section>
 
-    <!-- =================================================================== -->
-    <!-- ABA 3: ALERTAS (SOMENTE PERSONALIZADO)                              -->
-    <!-- =================================================================== -->
+    <!-- ABA 3: ALERTAS -->
     <section id="tab-alertas" class="hidden flex flex-col gap-5">
-      <!-- Banner só aparece se houver alerta rodando na TV agora -->
       <div id="active-alert-banner" class="hidden hero-card rounded-2xl p-4 shadow-lg flex items-center justify-between gap-3">
         <div class="min-w-0">
           <span class="text-[11px] uppercase tracking-widest text-hero-muted font-semibold">Alerta no ar agora</span>
@@ -375,7 +349,6 @@
         </button>
       </div>
 
-      <!-- Formulário de Alerta Instantâneo -->
       <form id="custom-alert-form" class="surface-card rounded-2xl p-5 shadow-sm flex flex-col gap-4">
         <div>
           <span class="block font-display text-lg font-bold text-ink">Enviar Alerta para a TV</span>
@@ -421,9 +394,7 @@
     <span class="material-symbols-outlined text-3xl">add</span>
   </button>
 
-  <!-- ===================================================================== -->
-  <!-- MODAL: CRIAR / EDITAR TAREFA                                          -->
-  <!-- ===================================================================== -->
+  <!-- MODAL: CRIAR / EDITAR TAREFA -->
   <div id="task-modal" class="hidden fixed inset-0 z-50 bg-black/55 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4">
     <form id="task-form" class="surface-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-safe flex flex-col gap-4 shadow-2xl">
       <div class="flex items-center justify-between">
@@ -442,7 +413,6 @@
           class="w-full px-3.5 py-2.5 rounded-xl bg-subtle text-ink text-sm outline-none focus:ring-2 focus:ring-accent"/>
       </div>
 
-      <!-- Campos Adulto -->
       <div id="adult-fields" class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-xs uppercase tracking-wider font-semibold text-ink-sec mb-1">Categoria</label>
@@ -456,7 +426,6 @@
         </div>
       </div>
 
-      <!-- Campos Meninos -->
       <div id="kids-fields" class="hidden flex flex-col gap-3">
         <div>
           <label class="block text-xs uppercase tracking-wider font-semibold text-ink-sec mb-1">Subtítulo</label>
@@ -497,12 +466,12 @@
     </form>
   </div>
 
-  <!-- Toast de Feedback -->
+  <!-- Toast -->
   <div id="toast" class="toast-hidden fixed bottom-6 left-1/2 z-50 hero-card px-4 py-2.5 rounded-full text-xs font-semibold shadow-xl"></div>
 
   <script>
     // =========================================================================
-    // 1. CONSTANTES E ESTADO PADRÃO
+    // 1. CONSTANTES E DATA DINÂMICA (vira automaticamente à meia-noite)
     // =========================================================================
     const DAYS = [
       { key: "seg", short: "Seg", full: "Segunda-feira" },
@@ -514,24 +483,35 @@
       { key: "dom", short: "Dom", full: "Domingo" }
     ];
     const JS_DAY_TO_KEY = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
-    const TODAY_KEY = JS_DAY_TO_KEY[new Date().getDay()];
+
+    function getTodayKey() {
+      return JS_DAY_TO_KEY[new Date().getDay()];
+    }
 
     function emptyWeek() {
-      return { seg: [], ter: [], qua: [], qui: [], sex: [], sab: [], dom: [] };
+      return { _v: 2, seg: [], ter: [], qua: [], qui: [], sex: [], sab: [], dom: [] };
     }
 
     function normalizeWeek(raw) {
       const week = emptyWeek();
-      if (Array.isArray(raw)) {
-        // Migração automática caso o banco ainda tenha a lista antiga sem dias
-        week[TODAY_KEY] = raw.filter(Boolean);
-        return week;
-      }
-      if (raw && typeof raw === "object") {
+      if (!raw) return week;
+
+      // Formato novo (semanal) — ignora completamente chaves numéricas antigas
+      const hasWeekStructure = typeof raw === "object" && !Array.isArray(raw) && (
+        raw._v === 2 || DAYS.some(d => Object.prototype.hasOwnProperty.call(raw, d.key))
+      );
+
+      if (hasWeekStructure) {
         DAYS.forEach(d => {
           const val = raw[d.key];
           week[d.key] = Array.isArray(val) ? val.filter(Boolean) : Object.values(val || {}).filter(Boolean);
         });
+        return week;
+      }
+
+      // Migração única se ainda vier do formato antigo (array puro)
+      if (Array.isArray(raw)) {
+        week[getTodayKey()] = raw.filter(Boolean);
       }
       return week;
     }
@@ -565,7 +545,8 @@
     let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
     let activeTab = "playlist";
     let activePlanner = "wilson";
-    let selectedDay = TODAY_KEY;
+    let lastKnownTodayKey = getTodayKey();
+    let selectedDay = lastKnownTodayKey;
     let db = null;
     let toastTimer = null;
 
@@ -595,6 +576,16 @@
       document.documentElement.classList.toggle("dark", isDark);
       document.getElementById("theme-icon").textContent = isDark ? "light_mode" : "dark_mode";
       document.getElementById("theme-label").textContent = isDark ? "Claro" : "Escuro";
+    }
+
+    function checkDayRollover() {
+      const nowKey = getTodayKey();
+      if (nowKey !== lastKnownTodayKey) {
+        if (selectedDay === lastKnownTodayKey) selectedDay = nowKey;
+        lastKnownTodayKey = nowKey;
+        renderWeekBar();
+        renderPlanners();
+      }
     }
 
     // =========================================================================
@@ -671,7 +662,6 @@
               : Object.values(val.items).filter(Boolean);
           }
           const ctrl = val.control || {};
-          // Reseta campos nulos corretamente para o botão Fixar sempre desmarcar
           state.playlist.control = {
             pinnedId: ctrl.pinnedId || null,
             paused: Boolean(ctrl.paused),
@@ -683,15 +673,13 @@
       });
 
       db.ref("planners").on("value", snap => {
-        const val = snap.val();
-        if (val) {
-          if (val.wilson !== undefined) state.planners.wilson = normalizeWeek(val.wilson);
-          if (val.rayssa !== undefined) state.planners.rayssa = normalizeWeek(val.rayssa);
-          if (val.meninos !== undefined) {
-            state.planners.meninos = Array.isArray(val.meninos)
-              ? val.meninos.filter(Boolean)
-              : Object.values(val.meninos || {}).filter(Boolean);
-          }
+        const val = snap.val() || {};
+        state.planners.wilson = normalizeWeek(val.wilson);
+        state.planners.rayssa = normalizeWeek(val.rayssa);
+        if (val.meninos !== undefined) {
+          state.planners.meninos = Array.isArray(val.meninos)
+            ? val.meninos.filter(Boolean)
+            : Object.values(val.meninos || {}).filter(Boolean);
         }
         renderWeekBar();
         renderPlanners();
@@ -746,7 +734,7 @@
     }
 
     // =========================================================================
-    // 5. ABA PLAYLIST (atualização in-place para manter animações fluidas)
+    // 5. ABA PLAYLIST
     // =========================================================================
     function renderPlaylist() {
       const items = [...state.playlist.items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -780,7 +768,6 @@
       const existingIds = Array.from(container.children).map(el => el.dataset.id).join(",");
       const newIds = items.map(i => i.id).join(",");
 
-      // Só cria os cards uma vez; depois atualiza atributos para preservar transições CSS
       if (existingIds !== newIds) {
         container.innerHTML = items.map(item => `
           <article data-id="${item.id}" class="surface-card p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3">
@@ -809,7 +796,6 @@
         `).join("");
       }
 
-      // Atualiza estado visual com animação
       items.forEach(item => {
         const card = container.querySelector(`[data-id="${item.id}"]`);
         if (!card) return;
@@ -838,7 +824,7 @@
     window.toggleSlide = (id) => {
       const items = state.playlist.items.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i);
       state.playlist.items = items;
-      renderPlaylist(); // animação imediata
+      renderPlaylist();
       db.ref("playlist/items").set(items);
     };
 
@@ -855,7 +841,7 @@
     window.togglePin = (id) => {
       const nextPin = state.playlist.control?.pinnedId === id ? null : id;
       state.playlist.control.pinnedId = nextPin;
-      renderPlaylist(); // resposta imediata
+      renderPlaylist();
       db.ref("playlist/control/pinnedId").set(nextPin);
       showToast(nextPin ? "Slide fixado na TV" : "Slide desafixado");
     };
@@ -892,7 +878,7 @@
     });
 
     // =========================================================================
-    // 6. ABA PLANNERS (SEMANAL) & RECADO
+    // 6. ABA PLANNERS (SEMANAL LIMPO) & RECADO
     // =========================================================================
     function isAdultPlanner() {
       return activePlanner === "wilson" || activePlanner === "rayssa";
@@ -911,7 +897,13 @@
       if (isAdultPlanner()) {
         const sorted = [...list].sort((a, b) => String(a.time || "99:99").localeCompare(String(b.time || "99:99")));
         state.planners[activePlanner][selectedDay] = sorted;
-        db.ref(`planners/${activePlanner}/${selectedDay}`).set(sorted);
+
+        // Salva a semana inteira com _v: 2 — elimina chaves antigas 0,1,2,3 do Firebase
+        const payload = { _v: 2 };
+        DAYS.forEach(d => {
+          payload[d.key] = state.planners[activePlanner][d.key] || [];
+        });
+        db.ref(`planners/${activePlanner}`).set(payload);
       } else {
         state.planners.meninos = list;
         db.ref("planners/meninos").set(list);
@@ -924,10 +916,11 @@
       bar.classList.toggle("hidden", !showWeek);
       if (!showWeek) return;
 
+      const todayKey = getTodayKey();
       const week = state.planners[activePlanner] || emptyWeek();
       bar.innerHTML = DAYS.map(d => {
         const isSel = d.key === selectedDay;
-        const isToday = d.key === TODAY_KEY;
+        const isToday = d.key === todayKey;
         const hasTasks = (week[d.key] || []).length > 0;
 
         return `
@@ -978,7 +971,7 @@
       const dayInfo = DAYS.find(d => d.key === selectedDay);
       const hintEl = document.getElementById("planner-hint");
       if (isAdultPlanner()) {
-        hintEl.textContent = selectedDay === TODAY_KEY
+        hintEl.textContent = selectedDay === getTodayKey()
           ? `${dayInfo.full} (Hoje na TV)`
           : `${dayInfo.full} (Agendado)`;
       } else {
@@ -1153,7 +1146,7 @@
     });
 
     // =========================================================================
-    // 7. ABA ALERTAS (SOMENTE PERSONALIZADO)
+    // 7. ABA ALERTAS
     // =========================================================================
     document.querySelectorAll(".dur-chip").forEach(chip => {
       chip.addEventListener("click", () => {
@@ -1198,6 +1191,10 @@
     });
 
     setInterval(renderActiveAlertBanner, 3000);
+    setInterval(checkDayRollover, 10000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) checkDayRollover();
+    });
     renderWeekBar();
   </script>
 </body>
