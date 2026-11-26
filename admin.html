@@ -5,6 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>Painel da Cozinha — Controle</title>
 
+  <link id="favIcon" rel="icon" type="image/png"/>
+  <link id="appleTouchIcon" rel="apple-touch-icon" sizes="180x180"/>
+  <link id="pwaManifest" rel="manifest"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Painel TV"/>
+  <meta name="theme-color" content="#141416"/>
+
+  <!-- GERADOR SÍNCRONO DE ÍCONE PNG MONOCROMÁTICO (PALETA ATUAL) -->
+  <script>
+    (function generateKitchenIconsAndManifest() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+
+        // Fundo cinza escuro sóbrio (#141416)
+        ctx.fillStyle = '#141416';
+        ctx.fillRect(0, 0, 180, 180);
+
+        // Moldura interna sutil em cinza elevado (#222226)
+        ctx.fillStyle = '#222226';
+        ctx.beginPath();
+        ctx.roundRect(16, 16, 148, 148, 38);
+        ctx.fill();
+
+        // Símbolo minimalista único: casinha limpa em branco (#f5f5f7)
+        ctx.strokeStyle = '#f5f5f7';
+        ctx.lineWidth = 8.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(46, 92);
+        ctx.lineTo(90, 52);
+        ctx.lineTo(134, 92);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(58, 82);
+        ctx.lineTo(58, 126);
+        ctx.lineTo(122, 126);
+        ctx.lineTo(122, 82);
+        ctx.stroke();
+
+        const pngDataUrl = canvas.toDataURL('image/png');
+        const appleIcon = document.getElementById('appleTouchIcon');
+        const favIcon = document.getElementById('favIcon');
+        if (appleIcon) appleIcon.href = pngDataUrl;
+        if (favIcon) favIcon.href = pngDataUrl;
+
+        const manifestObj = {
+          name: "Painel da Cozinha",
+          short_name: "Painel TV",
+          start_url: "./admin.html",
+          display: "standalone",
+          background_color: "#141416",
+          theme_color: "#141416",
+          icons: [
+            { src: pngDataUrl, sizes: "180x180", type: "image/png", purpose: "any maskable" }
+          ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+        const manifestEl = document.getElementById('pwaManifest');
+        if (manifestEl) manifestEl.href = URL.createObjectURL(manifestBlob);
+      } catch (e) {
+        console.warn("Falha ao gerar ícone PNG dinâmico:", e);
+      }
+    })();
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
@@ -471,7 +543,7 @@
 
   <script>
     // =========================================================================
-    // 1. CONSTANTES E DATA DINÂMICA (vira automaticamente à meia-noite)
+    // 1. CONSTANTES E DATA DINÂMICA
     // =========================================================================
     const DAYS = [
       { key: "seg", short: "Seg", full: "Segunda-feira" },
@@ -496,7 +568,6 @@
       const week = emptyWeek();
       if (!raw) return week;
 
-      // Formato novo (semanal) — ignora completamente chaves numéricas antigas
       const hasWeekStructure = typeof raw === "object" && !Array.isArray(raw) && (
         raw._v === 2 || DAYS.some(d => Object.prototype.hasOwnProperty.call(raw, d.key))
       );
@@ -509,7 +580,6 @@
         return week;
       }
 
-      // Migração única se ainda vier do formato antigo (array puro)
       if (Array.isArray(raw)) {
         week[getTodayKey()] = raw.filter(Boolean);
       }
@@ -898,7 +968,6 @@
         const sorted = [...list].sort((a, b) => String(a.time || "99:99").localeCompare(String(b.time || "99:99")));
         state.planners[activePlanner][selectedDay] = sorted;
 
-        // Salva a semana inteira com _v: 2 — elimina chaves antigas 0,1,2,3 do Firebase
         const payload = { _v: 2 };
         DAYS.forEach(d => {
           payload[d.key] = state.planners[activePlanner][d.key] || [];
