@@ -81,7 +81,6 @@
       box-shadow: inset 0 0 0 3px var(--accent);
     }
 
-    /* Barra de progresso acelerada por GPU (evita artefato no WebView Android) */
     .progress-track {
       position: relative;
       overflow: hidden;
@@ -266,7 +265,7 @@
     let weatherData = { temp: "--°", desc: "Atualizando..." };
 
     // =========================================================================
-    // 2. ÍCONES VETORIAIS (Rotina dos Meninos — escalam com o container)
+    // 2. ÍCONES VETORIAIS (Rotina dos Meninos)
     // =========================================================================
     const KIDS_ICONS = {
       tooth: `<svg class="w-full h-full" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M4.5 9c0-3.5 2.5-6.5 7.5-6.5s7.5 3 7.5 6.5c0 4-1.5 8.5-3 12.5-1 1-3.5 1-4.5-1-1 2-3.5 2-4.5 1-1.5-4-3-8.5-3-12.5z"></path><path d="M8.5 7.5c1.5 1 5.5 1 7 0"></path><circle cx="12" cy="13" fill="currentColor" r="1"></circle></svg>`,
@@ -506,17 +505,19 @@
     }
 
     // =========================================================================
-    // 7. RENDERIZADORES COM ESCALA DINÂMICA (a partir da 7ª tarefa)
+    // 7. RENDERIZADORES COM ESCALA DINÂMICA (1..4 / 5..6 / 7..8 / 9..12 / 13+)
     // =========================================================================
     function renderPlannerSlide(personKey, displayName) {
       const list = getPersonTodayTasks(personKey);
       const count = list.length;
       const doneCount = list.filter(t => t.status === "feito").length;
 
-      // Escala progressiva conforme a quantidade de tarefas no dia
+      // 1..4 tarefas (1 linha): tamanho amplo padrão
+      let wrapPad = "p-margin";
       let heroPad = "p-8 lg:p-10";
       let heroTitle = "font-display-xl text-display-xl";
       let gridCls = "grid-cols-2 gap-gutter";
+      let gridTop = "pt-4";
       let cardPad = "p-6 lg:p-7 min-h-[7rem] rounded-2xl";
       let titleCls = "font-headline-lg text-headline-lg";
       let catCls = "font-body-lg text-body-lg mt-1";
@@ -524,35 +525,54 @@
       let badgeCls = "font-label-md text-label-md px-4 py-1.5";
       let rightGap = "space-y-2";
 
-      if (count >= 7 && count <= 8) {
-        heroPad = "p-6 lg:p-7";
+      if (count >= 5 && count <= 6) {
+        // 5..6 tarefas (3 linhas em 2 colunas): reduz altura e espaçamento para caber inteiro sem corte
+        wrapPad = "px-margin py-6";
+        heroPad = "px-8 py-5";
         heroTitle = "font-display-lg text-display-lg";
-        gridCls = "grid-cols-2 gap-4";
-        cardPad = "p-4 lg:p-5 min-h-[5.25rem] rounded-2xl";
-        titleCls = "font-headline-lg text-[1.65rem] leading-tight font-semibold";
-        catCls = "font-body-lg text-[1.05rem] leading-snug mt-0.5";
-        timeCls = "font-headline-lg text-[1.55rem] leading-tight font-semibold";
-        badgeCls = "font-label-md text-[0.85rem] leading-none px-3.5 py-1.5";
-        rightGap = "space-y-1.5";
-      } else if (count >= 9 && count <= 12) {
-        heroPad = "p-5 lg:p-6";
+        gridCls = "grid-cols-2 gap-x-6 gap-y-3";
+        gridTop = "pt-2";
+        cardPad = "px-5 py-3 min-h-[4.25rem] rounded-2xl";
+        titleCls = "font-headline-lg text-[1.45rem] leading-tight font-semibold";
+        catCls = "font-body-lg text-[0.95rem] leading-tight mt-0.5";
+        timeCls = "font-headline-lg text-[1.4rem] leading-tight font-semibold";
+        badgeCls = "font-label-md text-[0.78rem] leading-none px-3 py-1";
+        rightGap = "space-y-1";
+      } else if (count >= 7 && count <= 8) {
+        wrapPad = "px-margin py-6";
+        heroPad = "px-7 py-5";
         heroTitle = "font-display-lg text-display-lg";
-        gridCls = "grid-cols-3 gap-4";
-        cardPad = "p-4 min-h-[4.75rem] rounded-2xl";
+        gridCls = "grid-cols-2 gap-3.5";
+        gridTop = "pt-2";
+        cardPad = "px-5 py-3 min-h-[3.9rem] rounded-xl";
         titleCls = "font-headline-lg text-[1.35rem] leading-tight font-semibold";
-        catCls = "font-body-lg text-[0.95rem] leading-snug mt-0.5";
+        catCls = "font-body-lg text-[0.9rem] leading-tight mt-0.5";
         timeCls = "font-headline-lg text-[1.3rem] leading-tight font-semibold";
         badgeCls = "font-label-md text-[0.75rem] leading-none px-3 py-1";
         rightGap = "space-y-1";
-      } else if (count > 12) {
-        heroPad = "p-5";
+      } else if (count >= 9 && count <= 12) {
+        wrapPad = "px-margin py-5";
+        heroPad = "px-7 py-4";
         heroTitle = "font-headline-xl text-headline-xl";
-        gridCls = "grid-cols-3 gap-3";
-        cardPad = "p-3 min-h-[3.75rem] rounded-xl";
-        titleCls = "font-headline-lg text-[1.1rem] leading-tight font-semibold";
-        catCls = "font-body-lg text-[0.85rem] leading-snug";
-        timeCls = "font-headline-lg text-[1.1rem] leading-tight font-semibold";
-        badgeCls = "font-label-md text-[0.7rem] leading-none px-2.5 py-1";
+        gridCls = "grid-cols-3 gap-3.5";
+        gridTop = "pt-2";
+        cardPad = "p-3.5 min-h-[4.25rem] rounded-xl";
+        titleCls = "font-headline-lg text-[1.25rem] leading-tight font-semibold";
+        catCls = "font-body-lg text-[0.88rem] leading-tight mt-0.5";
+        timeCls = "font-headline-lg text-[1.2rem] leading-tight font-semibold";
+        badgeCls = "font-label-md text-[0.72rem] leading-none px-2.5 py-1";
+        rightGap = "space-y-1";
+      } else if (count > 12) {
+        wrapPad = "px-margin py-5";
+        heroPad = "px-6 py-4";
+        heroTitle = "font-headline-xl text-headline-xl";
+        gridCls = "grid-cols-3 gap-2.5";
+        gridTop = "pt-2";
+        cardPad = "p-3 min-h-[3.5rem] rounded-xl";
+        titleCls = "font-headline-lg text-[1.05rem] leading-tight font-semibold";
+        catCls = "font-body-lg text-[0.8rem] leading-tight";
+        timeCls = "font-headline-lg text-[1.05rem] leading-tight font-semibold";
+        badgeCls = "font-label-md text-[0.68rem] leading-none px-2.5 py-1";
         rightGap = "space-y-1";
       }
 
@@ -588,8 +608,8 @@
       `;
 
       return `
-        <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
-          <section class="hero-card w-full rounded-3xl ${heroPad} shadow-xl flex items-center justify-between">
+        <div class="w-full h-full ${wrapPad} box-border flex flex-col justify-between slide-fade">
+          <section class="hero-card w-full rounded-3xl ${heroPad} shadow-xl flex items-center justify-between shrink-0">
             <div class="flex flex-col justify-center space-y-1">
               <span class="font-label-md text-label-md text-hero-muted tracking-widest uppercase">ROTINA DO DIA</span>
               <h1 class="${heroTitle} text-on-hero tracking-tight">${esc(displayName)}</h1>
@@ -600,11 +620,11 @@
             </div>
           </section>
 
-          <section class="w-full grid ${gridCls} my-auto pt-4">
+          <section class="w-full grid ${gridCls} my-auto ${gridTop}">
             ${count ? cardsHtml : emptyHtml}
           </section>
 
-          <footer class="w-full flex items-center justify-between pt-3 text-ink-sec font-label-md text-label-md">
+          <footer class="w-full flex items-center justify-between pt-2 text-ink-sec font-label-md text-label-md shrink-0">
             <div class="flex items-center space-x-6">
               <span>Concluídas: ${doneCount} de ${count}</span>
               <span>•</span>
@@ -628,7 +648,8 @@
       const circ = 188.5;
       const offset = circ - (circ * pct) / 100;
 
-      // Escala progressiva para Rotina dos Meninos (sem cortar nenhum item)
+      let wrapPad = "p-margin";
+      let heroPad = "px-10 py-6";
       let gridCls = "grid-cols-2 gap-7";
       let cardPad = "p-7 rounded-[1.75rem]";
       let innerGap = "gap-6";
@@ -640,34 +661,40 @@
       let checkSize = "w-6 h-6";
 
       if (count >= 5 && count <= 6) {
-        gridCls = "grid-cols-2 gap-5";
-        cardPad = "p-5 rounded-2xl";
+        wrapPad = "px-margin py-6";
+        heroPad = "px-8 py-5";
+        gridCls = "grid-cols-2 gap-x-6 gap-y-3.5";
+        cardPad = "px-5 py-3.5 rounded-2xl";
         innerGap = "gap-4";
-        iconBox = "w-16 h-16 p-3.5 rounded-2xl";
-        titleCls = "font-headline-lg text-[1.7rem] leading-tight font-semibold";
-        subCls = "font-body-lg text-[1.1rem] leading-snug mt-0.5";
-        pillPad = "px-5 py-2";
-        pillTxt = "font-label-md text-[0.95rem] leading-none";
-        checkSize = "w-5 h-5";
+        iconBox = "w-14 h-14 p-3 rounded-xl";
+        titleCls = "font-headline-lg text-[1.45rem] leading-tight font-semibold";
+        subCls = "font-body-lg text-[0.98rem] leading-tight mt-0.5";
+        pillPad = "px-4 py-1.5";
+        pillTxt = "font-label-md text-[0.82rem] leading-none";
+        checkSize = "w-4 h-4";
       } else if (count >= 7 && count <= 9) {
-        gridCls = "grid-cols-3 gap-4";
+        wrapPad = "px-margin py-5";
+        heroPad = "px-8 py-4";
+        gridCls = "grid-cols-3 gap-3.5";
         cardPad = "p-4 rounded-2xl";
         innerGap = "gap-3.5";
         iconBox = "w-12 h-12 p-2.5 rounded-xl";
         titleCls = "font-headline-lg text-[1.25rem] leading-tight font-semibold";
-        subCls = "font-body-lg text-[0.95rem] leading-snug mt-0.5";
+        subCls = "font-body-lg text-[0.9rem] leading-tight mt-0.5";
         pillPad = "px-3.5 py-1.5";
-        pillTxt = "font-label-md text-[0.8rem] leading-none";
+        pillTxt = "font-label-md text-[0.78rem] leading-none";
         checkSize = "w-4 h-4";
       } else if (count > 9) {
-        gridCls = "grid-cols-3 gap-3";
+        wrapPad = "px-margin py-5";
+        heroPad = "px-8 py-4";
+        gridCls = "grid-cols-3 gap-2.5";
         cardPad = "p-3 rounded-xl";
         innerGap = "gap-3";
         iconBox = "w-10 h-10 p-2 rounded-lg";
-        titleCls = "font-headline-lg text-[1.1rem] leading-tight font-semibold";
-        subCls = "font-body-lg text-[0.85rem] leading-snug";
+        titleCls = "font-headline-lg text-[1.08rem] leading-tight font-semibold";
+        subCls = "font-body-lg text-[0.82rem] leading-tight";
         pillPad = "px-2.5 py-1";
-        pillTxt = "font-label-md text-[0.72rem] leading-none";
+        pillTxt = "font-label-md text-[0.7rem] leading-none";
         checkSize = "w-3.5 h-3.5";
       }
 
@@ -730,8 +757,8 @@
       }).join("");
 
       return `
-        <div class="w-full h-full p-margin box-border flex flex-col justify-between slide-fade">
-          <section class="hero-card rounded-[1.75rem] px-10 py-6 shadow-xl flex items-center justify-between">
+        <div class="w-full h-full ${wrapPad} box-border flex flex-col justify-between slide-fade">
+          <section class="hero-card rounded-[1.75rem] ${heroPad} shadow-xl flex items-center justify-between shrink-0">
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-3">
                 <span class="font-label-md text-label-md uppercase tracking-[0.2em] text-hero-muted">MISSÕES DE HOJE</span>
@@ -760,7 +787,7 @@
 
           <section class="grid ${gridCls} my-auto">${cardsHtml}</section>
 
-          <footer class="flex items-center justify-between pt-2 text-ink-muted">
+          <footer class="flex items-center justify-between pt-2 text-ink-muted shrink-0">
             <div class="flex items-center gap-3">
               <span class="w-2.5 h-2.5 rounded-full bg-pill-strong"></span>
               <p class="font-label-md text-label-md tracking-widest uppercase">MODO INFANTIL • TV COZINHA • EXIBIÇÃO CONTÍNUA</p>
